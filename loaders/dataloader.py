@@ -1,5 +1,6 @@
 from langchain_community.document_loaders import PyPDFLoader
 from glob import glob
+import pickle
 
 
 class Loader:
@@ -40,9 +41,26 @@ class Loader:
 
         return name_list
 
+    def save_loader(self, filepath):
+        with open(filepath, "wb") as file:
+            pickle.dump(self, file)
+
+
+def load_loader(filepath):
+    with open(filepath, "rb") as file:
+        loader = pickle.load(file)
+
+    return loader
+
 
 if __name__ == "__main__":
-    loader = Loader("data/pdf")
+    # loader = Loader("data/pdf")
     # print(loader.docs[0])
-    for i in range(len(loader.docs)):
-        print(loader.docs[i].metadata["source"])
+    # for i in range(len(loader.docs)):
+    #     print(loader.docs[i].metadata["source"])
+    # loader.save_loader("data/dataloaders/raw.pkl")
+
+    loader = load_loader("data/dataloaders/raw.pkl")
+
+    for i in range(0, 10):
+        print(loader.docs[i])
