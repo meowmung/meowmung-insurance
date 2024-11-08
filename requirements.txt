@@ -1,0 +1,9 @@
+OpenAI
+pandas
+python-dotenv
+langchain
+langchain_community
+langchain_openai
+black
+chromadb
+pypdf
