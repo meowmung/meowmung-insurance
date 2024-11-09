@@ -12,31 +12,35 @@ class Chatbot:
         self.llm = ChatOpenAI(
             model_name=model_name, streaming=streaming, temperature=temperature
         )
-        self.template = """You are a chatbot for recommending pet insurance products for dogs and cats.
-        The user will input the following features:
-        1. pet type : dog, cat
-        2. breed
-        3. age
-        4. gender : M, F
-        5. neuterized : yes, no
-        6. concerned_illnesses : selected among [Patellar issues, Glaucoma, Dermatosis, Dental issues]
+        self.template = """당신은 반려견과 반려묘를 위한 보험 상품을 추천하는 챗봇입니다.
+        사용자는 다음과 같은 특징을 입력할 것입니다:
+        1. 반려동물 종류 (개, 고양이)
+        2. 품종
+        3. 나이
+        4. 성별
+        5. 중성화 여부
+        6. 걱정되는 질병: [슬개골/슬관절, 녹내장/백내장, 피부염, 치과 치료] 중 선택
 
-        Use the input features to find the most fitting insurance item from the provided context.
-        The best insurance item should have special contracts (특약) that match the given features as closely as possible.
+        입력된 특징을 사용하여 제공된 컨텍스트에서 가장 적합한 보험 상품과 특약을 찾으세요.
+        제공되는 반려동물의 조건과 가장 유사한 특약을 가지는 보험 상품 3개를 추천해야 합니다.
+        추천하는 특약의 갯수는 제한이 없습니다.
+        특약 이름은 임의로 생성하지 않고, 주어진 문서에서 검색하여 사용자에게 있는 그대로 제공하세요.
+        문서에서 제공되지 않는 단어는 출력되는 JSON 데이터 포함되어서는 안됩니다.
 
-        Respond in the following JSON format:
-            "insurance": The name of the insurance company as shown in the source document file name,
-            "special_contracts": [List of special contracts that best match the features]
-            "reason": reasons for your selctions
+        다음 JSON 형식으로 응답하세요:
+            "insurance": 출처 문서 파일 이름에 나와 있는 보험사 이름,
+            "special_contracts": [입력된 특징과 가장 잘 맞는 특약 리스트]
+
+        최종 답변에는 총 3개의 JSON 데이터가 포함됩니다.
 
         {context}
 
-        Question: {question}
-        Answer:
+        질문: {question}
+        답변:
         """
 
         self.vectorstore = vectorstore
-        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 3})
 
     def ask(self, query):
 
@@ -76,6 +80,6 @@ if __name__ == "__main__":
 
     print(
         chatbot.ask(
-            "Please recommend a pet insurance item for my dog. She is a Dachshund and is 4 years old. She is neutralized. I am concerned of Dental issues."
+            "제 강아지를 위한 보험 상품과 세부 특약들을 추천해주세요. 4살짜리 여자아이이며 견종은 닥스훈트입니다. 슬개골과 치과 치료가 걱정돼요."
         )
     )
