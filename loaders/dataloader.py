@@ -1,6 +1,13 @@
 from langchain_community.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from glob import glob
 import pickle
+
+
+class Document:
+    def __init__(self, page_content, metadata=None):
+        self.page_content = page_content
+        self.metadata = metadata or {}
 
 
 class Loader:
@@ -11,48 +18,38 @@ class Loader:
             self.docs = self.load_dir(dir_path)
         else:
             raise ValueError("Either 'dir_path' or 'file_path' must be provided.")
-        self.name_list = self.name_doc(self.docs)
 
-    def load_dir(self, dir_path):
-        """
-        dir_path: string
-            path to dir containing pdf data
-
-        returns: list of chunks of pdf (type: Documents)
-        """
+    def load_dir(self, dir_path, chunk_size=500, overlap=50):
         docs = []
         file_paths = glob(f"{dir_path}/*.pdf")
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size, chunk_overlap=overlap
+        )
 
         for path in file_paths:
             loader = PyPDFLoader(path)
             doc_list = loader.load_and_split()
             for doc in doc_list:
-                docs.append(doc)
+                chunks = text_splitter.split_text(doc.page_content)
+                for chunk in chunks:
+                    docs.append(Document(page_content=chunk, metadata=doc.metadata))
 
         return docs
 
-    def load_file(self, file_path):
+    def load_file(self, file_path, chunk_size=500, overlap=50):
         docs = []
-
         loader = PyPDFLoader(file_path)
         doc_list = loader.load_and_split()
+
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size, chunk_overlap=overlap
+        )
         for doc in doc_list:
-            docs.append(doc)
+            chunks = text_splitter.split_text(doc.page_content)
+            for chunk in chunks:
+                docs.append(Document(page_content=chunk, metadata=doc.metadata))
 
-    def name_doc(self, docs):
-        """
-        docs: list
-            list of chunks of pdf (type: Documents)
-
-        returns: list of names of chunks (will be used as doc ID)
-        """
-        name_list = []
-        for i in range(len(docs)):
-            source = docs[i].metadata["source"]
-            page = docs[i].metadata["page"]
-            name_list.append(f"{source}_page{page}")
-
-        return name_list
+        return docs
 
     def save_loader(self, filepath):
         with open(filepath, "wb") as file:
@@ -64,3 +61,13 @@ def load_loader(filepath):
         loader = pickle.load(file)
 
     return loader
+
+
+if __name__ == "__main__":
+    loader_list = glob("data/dataloaders/*.pkl")
+
+    for loader_path in loader_list:
+        loader = load_loader(loader_path)
+        print(loader_path)
+        print((loader.docs[0].page_content))
+        print("===============\n")

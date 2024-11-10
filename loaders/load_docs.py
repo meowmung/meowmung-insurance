@@ -2,19 +2,37 @@ from loaders.dataloader import *
 from loaders.vectorstore import VectorStore
 from langchain_openai import OpenAIEmbeddings
 from chromadb.config import Settings
+from dotenv import load_dotenv
+from glob import glob
+from pathlib import Path
 
 
-def load_by_company(company_name):
-    FILE_PATH = f"data/pdf/{company_name}.pdf"
-    loader = Loader(file_path=FILE_PATH)
-    loader.save_loader(f"data/dataloaders/{company_name}_loader.pkl")
+def extract_insurance_name(file_path):
+    insurance_name = Path(file_path).stem
+    return insurance_name
 
 
-def store_by_company(company_name):
-    loader = load_loader(f"data/dataloaders/{company_name}_loader.pkl")
+def load_by_insurance(file_path):
+    insurance_name = extract_insurance_name(file_path)
+    loader = Loader(file_path=file_path)
+    loader.save_loader(f"data/dataloaders/{insurance_name}_loader.pkl")
+
+
+def store_by_insurance(file_path):
+    insurance_name = extract_insurance_name(file_path)
+    loader = load_loader(f"data/dataloaders/{insurance_name}_loader.pkl")
     vectordb = VectorStore(
-        collection_name=f"{company_name}-store",
+        collection_name=f"{insurance_name}-store",
         embedding_function=OpenAIEmbeddings(),
         client_settings=Settings(persist_directory="data/db", is_persistent=True),
     )
     vectordb.add_docs(loader)
+
+
+if __name__ == "__main__":
+    load_dotenv()
+
+    file_paths = glob(f"data/pdf/*.pdf")
+    for path in file_paths:
+        load_by_insurance(path)
+        # store_by_insurance(path)

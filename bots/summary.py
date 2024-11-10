@@ -51,7 +51,7 @@ if __name__ == "__main__":
     load_dotenv()
 
     vectordb = Chroma(
-        collection_name="pet-insurance",
+        collection_name="DB-store",
         persist_directory="data/db",
         embedding_function=OpenAIEmbeddings(),
     )
