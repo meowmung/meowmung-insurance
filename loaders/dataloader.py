@@ -4,11 +4,16 @@ import pickle
 
 
 class Loader:
-    def __init__(self, dir_path):
-        self.docs = self.load_pdf(dir_path)
+    def __init__(self, dir_path=None, file_path=None):
+        if file_path:
+            self.docs = self.load_file(file_path)
+        elif dir_path:
+            self.docs = self.load_dir(dir_path)
+        else:
+            raise ValueError("Either 'dir_path' or 'file_path' must be provided.")
         self.name_list = self.name_doc(self.docs)
 
-    def load_pdf(self, dir_path):
+    def load_dir(self, dir_path):
         """
         dir_path: string
             path to dir containing pdf data
@@ -25,6 +30,14 @@ class Loader:
                 docs.append(doc)
 
         return docs
+
+    def load_file(self, file_path):
+        docs = []
+
+        loader = PyPDFLoader(file_path)
+        doc_list = loader.load_and_split()
+        for doc in doc_list:
+            docs.append(doc)
 
     def name_doc(self, docs):
         """
@@ -51,16 +64,3 @@ def load_loader(filepath):
         loader = pickle.load(file)
 
     return loader
-
-
-if __name__ == "__main__":
-    # loader = Loader("data/pdf")
-    # print(loader.docs[0])
-    # for i in range(len(loader.docs)):
-    #     print(loader.docs[i].metadata["source"])
-    # loader.save_loader("data/dataloaders/raw.pkl")
-
-    loader = load_loader("data/dataloaders/raw.pkl")
-
-    for i in range(0, 10):
-        print(loader.docs[i])
