@@ -21,16 +21,12 @@ class SummaryBot:
             3. 세부 특수약관(특약)들: 각 보험 상품마다 존재하는 세부 특수약관(특약)들에 대한 정보를 검색하고, 각 약관에 대한 정보를 JSON 형태로 제공하세요.
             약관이 여러 개면, 여러 개의 항목이 포함될 수 있습니다.
             괄호 안에 주어진 정보는 key 의 이름입니다.
-            각 특수약관의 이름은 "특약 이름" 이라는 단어로 명시되어 있습니다.
-            예를 들어, '''특약 이름 [반려동물의료비확장보장(치과/구강질환)]''' 라는 문장이 발견되면, 해당 특약의 이름은 대괄호 안에 있는
-            '''반려동물의료비확장보장(치과/구강질환)''' 입니다.
             문서 내 명시된 모든 특약 이름과 정보들을 찾으세요.
             검색해야 할 정보는:
                 * 특수약관의 이름 (name)
                 * 보험금 지급사유 (causes)
                 * 보험금 지급 세부사항 (details)
                 * 보상 금액 한도 (limit)
-
 
             제공된 문서 내의 검색 결과에만 기반하여 응답하세요. 절대로 임의의 정보를 생성하지 마세요.
             특약 이름에 대한 응답 생성 시서로 다른 문장 내의 단어들을 조합하지 마세요.
@@ -42,19 +38,26 @@ class SummaryBot:
             """,
         )
         self.vectorstore = vectorstore
-        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 20})
+        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 30})
         self.qa_chain = LLMChain(prompt=self.template, llm=self.llm)
 
-    def summarize(self, question="보험 상품에 대한 요약을 제공해 주세요."):
+    def summarize(
+        self,
+        question="주어진 context 내에 존재하는 모든 특약들에 대한 정보를 검색해주세요",
+    ):
         result = self.retriever.get_relevant_documents(question)
-
-        if not result:
-            raise ValueError("No relevant documents found!")
-
         company = result[0].metadata["insurance"]
         insurance = get_insurance(company)
 
-        context = "\n".join([doc.page_content for doc in result])
+        special_terms = self.vectorstore.loader.special_terms
+
+        context = "\n".join(
+            [
+                doc.page_content
+                for doc in result
+                if any(term["name"] in doc.page_content for term in special_terms)
+            ]
+        )
 
         response = self.qa_chain.invoke(
             {
@@ -65,6 +68,8 @@ class SummaryBot:
             }
         )
 
+        print(special_terms)
+        print("+++++++++++++++++++++++++")
         return response
 
 
@@ -88,7 +93,8 @@ def get_insurance(company):
 if __name__ == "__main__":
     load_dotenv()
 
-    vectordb = load_vectorstore("KB_dog-store")
+    loader = load_loader("data/dataloaders/KB_dog_loader.pkl")
+    vectordb = load_vectorstore("KB_dog-store", loader)
 
     bot = SummaryBot(
         model_name="gpt-4-turbo", streaming=False, temperature=0, vectorstore=vectordb

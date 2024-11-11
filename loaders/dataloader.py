@@ -3,6 +3,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from glob import glob
 import pickle
 from pathlib import Path
+import re
 
 
 class Document:
@@ -23,6 +24,7 @@ class Loader:
             self.docs = self.load_dir(dir_path)
         else:
             raise ValueError("Either 'dir_path' or 'file_path' must be provided.")
+        self.special_terms = extract_special_terms(self)
 
     def load_dir(self, dir_path, chunk_size=500, overlap=50):
         docs = []
@@ -72,6 +74,18 @@ class Loader:
             pickle.dump(self, file)
 
 
+def extract_special_terms(loader):
+    special_terms = []
+    pattern = r"특약 이름\s?\[([^\]]+)\]"
+
+    for doc in loader.docs:
+        matches = re.findall(pattern, doc.page_content)
+        for match in matches:
+            special_terms.append({"name": match})
+
+    return special_terms
+
+
 def load_loader(filepath):
     with open(filepath, "rb") as file:
         loader = pickle.load(file)
@@ -86,7 +100,6 @@ def extract_insurance_name(file_path):
 
 if __name__ == "__main__":
     loader = load_loader("data/dataloaders/KB_dog_loader.pkl")
-    for i in range(0, 30):
-        print(i)
-        print((loader.docs[i].page_content))
-        print("=================================")
+    print((loader.docs[0].page_content))
+    print("=================================")
+    print(loader.special_terms)
