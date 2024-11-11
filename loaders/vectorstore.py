@@ -23,25 +23,26 @@ class VectorStore(Chroma):
 
         returns: vectordb w/ new data added
         """
-        docs_tostr = [doc.page_content for doc in loader.docs]
-        emb_func = OpenAIEmbeddings()
-        embeddings = emb_func.embed_documents(docs_tostr)
+        doc_text = [doc.page_content for doc in loader.docs]
+        embedding_function = OpenAIEmbeddings()
+        embeddings = embedding_function.embed_documents(doc_text)
 
-        self.add_documents(documents=docs_tostr, embeddings=embeddings)
+        self.add_documents(documents=loader.docs, embeddings=embeddings)
+
+
+def load_vectorstore(collection_name):
+    vectordb = VectorStore(
+        collection_name=collection_name,
+        embedding_function=OpenAIEmbeddings(),
+        client_settings=Settings(persist_directory="data/db", is_persistent=True),
+    )
+
+    return vectordb
 
 
 if __name__ == "__main__":
     load_dotenv()
 
-    vectordb = VectorStore(
-        collection_name="pet-insurance",
-        embedding_function=OpenAIEmbeddings(),
-        client_settings=Settings(persist_directory="data/db", is_persistent=True),
-    )
-
-    print(vectordb._collection.count())
-
-    loader = Loader("data/pdf")
-    vectordb.add_docs(loader)
+    vectordb = load_vectorstore("KB_dog-store")
 
     print(vectordb._collection.count())

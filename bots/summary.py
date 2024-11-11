@@ -1,9 +1,8 @@
 from dotenv import load_dotenv
-from langchain import PromptTemplate
+from langchain import PromptTemplate, LLMChain
 from langchain.chains import RetrievalQA
 from langchain_openai import ChatOpenAI
 from loaders.vectorstore import *
-from langchain_community.vectorstores import Chroma
 
 
 class SummaryBot:
@@ -11,54 +10,89 @@ class SummaryBot:
         self.llm = ChatOpenAI(
             model_name=model_name, streaming=streaming, temperature=temperature
         )
-        self.template = """ 
-        당신은 보험 상품 설명서를 요약하는 챗봇입니다.
-        사용자가 제공하는 설명서의 내용을 요약하여 다음의 정보를 제공합니다:
-        1. 보험 회사 이름
-        2. 보험 상품 명
-        3. 세부 특약들 (최대한 자세히 기재하세요)
-        
-        제공된 문서 내용에만 기반하여 응답하세요. 임의의 정보를 생성하지 마세요.
 
-        {context}
+        self.template = PromptTemplate(
+            input_variables=["company", "insurance", "context", "query"],
+            template=""" 
+            당신은 보험 상품 설명서를 요약하는 챗봇입니다.
+            사용자가 제공하는 설명서의 내용을 요약하여 다음의 세 가지 정보를 JSON 형태로 제공합니다:
+            1. 보험 회사 이름: {company}
+            2. 보험 상품 명: {insurance}
+            3. 세부 특수약관(특약)들: 각 보험 상품마다 존재하는 세부 특수약관(특약)들에 대한 정보를 검색하고, 각 약관에 대한 정보를 JSON 형태로 제공하세요.
+            약관이 여러 개면, 여러 개의 항목이 포함될 수 있습니다.
+            괄호 안에 주어진 정보는 key 의 이름입니다.
+            각 특수약관의 이름은 "특약 이름" 이라는 단어로 명시되어 있습니다.
+            예를 들어, '''특약 이름 [반려동물의료비확장보장(치과/구강질환)]''' 라는 문장이 발견되면, 해당 특약의 이름은 대괄호 안에 있는
+            '''반려동물의료비확장보장(치과/구강질환)''' 입니다.
+            문서 내 명시된 모든 특약 이름과 정보들을 찾으세요.
+            검색해야 할 정보는:
+                * 특수약관의 이름 (name)
+                * 보험금 지급사유 (causes)
+                * 보험금 지급 세부사항 (details)
+                * 보상 금액 한도 (limit)
 
-        질문: {question}
-        답변:
-        """
+
+            제공된 문서 내의 검색 결과에만 기반하여 응답하세요. 절대로 임의의 정보를 생성하지 마세요.
+            특약 이름에 대한 응답 생성 시서로 다른 문장 내의 단어들을 조합하지 마세요.
+
+            {context}
+
+            질문: {query}
+            답변:
+            """,
+        )
         self.vectorstore = vectorstore
-        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 10})
+        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 20})
+        self.qa_chain = LLMChain(prompt=self.template, llm=self.llm)
 
     def summarize(self, question="보험 상품에 대한 요약을 제공해 주세요."):
-        prompt = PromptTemplate(
-            input_variables=["context", "question"],
-            template=self.template,
+        result = self.retriever.get_relevant_documents(question)
+
+        if not result:
+            raise ValueError("No relevant documents found!")
+
+        company = result[0].metadata["insurance"]
+        insurance = get_insurance(company)
+
+        context = "\n".join([doc.page_content for doc in result])
+
+        response = self.qa_chain.invoke(
+            {
+                "company": company,
+                "insurance": insurance,
+                "context": context,
+                "query": question,
+            }
         )
 
-        qa_chain = RetrievalQA.from_chain_type(
-            llm=self.llm,
-            chain_type_kwargs={"prompt": prompt},
-            retriever=self.retriever,
-            return_source_documents=True,
-        )
+        return response
 
-        response = qa_chain.invoke({"context": "", "query": question})
-        print("Retrieved documents:", response.get("source_documents"))
 
-        return response["result"]
+def get_insurance(company):
+    insurance_items = {
+        "DB_cat": "무배당 다이렉트 펫블리 반려묘보험",
+        "DB_dog": "무배당 다이렉트 펫블리 반려견보험",
+        "hyundai_dog": "무배당 현대해상다이렉트굿앤굿 우리펫보험",
+        "hyundai_cat": "무배당 현대해상다이렉트굿앤굿 우리펫보험",
+        "KB_dog": "KB 다이렉트 금쪽같은 펫보험 (강아지) (무배당)",
+        "KB_cat": "KB 다이렉트 금쪽같은 펫보험 (고양이) (무배당)",
+        "meritz_dog": "(무)펫퍼민트 Puppy&Family 보험 다이렉트",
+        "mertiz_cat": "(무)펫퍼민트 Cat&Family 보험 다이렉트",
+        "samsung_dog": "무배당 삼성화재 다이렉트 반려견보험",
+        "samsung_cat": "무배당 삼성화재 다이렉트 반려묘보험",
+    }
+
+    return insurance_items[company]
 
 
 if __name__ == "__main__":
     load_dotenv()
 
-    vectordb = Chroma(
-        collection_name="DB-store",
-        persist_directory="data/db",
-        embedding_function=OpenAIEmbeddings(),
-    )
+    vectordb = load_vectorstore("KB_dog-store")
 
     bot = SummaryBot(
-        model_name="gpt-4", streaming=False, temperature=0, vectorstore=vectordb
+        model_name="gpt-4-turbo", streaming=False, temperature=0, vectorstore=vectordb
     )
 
     summary = bot.summarize()
-    print(summary)
+    print(summary["text"])

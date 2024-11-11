@@ -7,11 +7,6 @@ from glob import glob
 from pathlib import Path
 
 
-def extract_insurance_name(file_path):
-    insurance_name = Path(file_path).stem
-    return insurance_name
-
-
 def load_by_insurance(file_path):
     insurance_name = extract_insurance_name(file_path)
     loader = Loader(file_path=file_path)
@@ -32,7 +27,11 @@ def store_by_insurance(file_path):
 if __name__ == "__main__":
     load_dotenv()
 
-    file_paths = glob(f"data/pdf/*.pdf")
-    for path in file_paths:
-        load_by_insurance(path)
-        # store_by_insurance(path)
+    # file_paths = glob(f"data/pdf/*.pdf")
+    # for path in file_paths:
+    #     load_by_insurance(path)
+    #     store_by_insurance(path)
+
+    path = "data/pdf/KB_dog.pdf"
+    load_by_insurance(path)
+    store_by_insurance(path)

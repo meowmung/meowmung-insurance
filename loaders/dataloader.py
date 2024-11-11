@@ -2,12 +2,17 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from glob import glob
 import pickle
+from pathlib import Path
 
 
 class Document:
-    def __init__(self, page_content, metadata=None):
+    def __init__(self, page_content, metadata=None, doc_id=None):
         self.page_content = page_content
         self.metadata = metadata or {}
+        self.id = doc_id
+
+    def add_metadata(self, key, value):
+        self.metadata[key] = value
 
 
 class Loader:
@@ -27,28 +32,39 @@ class Loader:
         )
 
         for path in file_paths:
+            insurance_name = extract_insurance_name(path)
             loader = PyPDFLoader(path)
             doc_list = loader.load_and_split()
-            for doc in doc_list:
+            for doc_index, doc in enumerate(doc_list):
+                doc.metadata["insurance"] = insurance_name
                 chunks = text_splitter.split_text(doc.page_content)
-                for chunk in chunks:
-                    docs.append(Document(page_content=chunk, metadata=doc.metadata))
+                for chunk_index, chunk in enumerate(chunks):
+                    doc_id = f"{insurance_name}_{doc_index}_{chunk_index}"
+                    docs.append(
+                        Document(
+                            page_content=chunk, metadata=doc.metadata, doc_id=doc_id
+                        )
+                    )
 
         return docs
 
     def load_file(self, file_path, chunk_size=500, overlap=50):
         docs = []
+        insurance_name = extract_insurance_name(file_path)
         loader = PyPDFLoader(file_path)
         doc_list = loader.load_and_split()
 
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size, chunk_overlap=overlap
         )
-        for doc in doc_list:
+        for doc_index, doc in enumerate(doc_list):
+            doc.metadata["insurance"] = insurance_name
             chunks = text_splitter.split_text(doc.page_content)
-            for chunk in chunks:
-                docs.append(Document(page_content=chunk, metadata=doc.metadata))
-
+            for chunk_index, chunk in enumerate(chunks):
+                doc_id = f"{insurance_name}_{doc_index}_{chunk_index}"
+                docs.append(
+                    Document(page_content=chunk, metadata=doc.metadata, doc_id=doc_id)
+                )
         return docs
 
     def save_loader(self, filepath):
@@ -63,11 +79,14 @@ def load_loader(filepath):
     return loader
 
 
-if __name__ == "__main__":
-    loader_list = glob("data/dataloaders/*.pkl")
+def extract_insurance_name(file_path):
+    insurance_name = Path(file_path).stem
+    return insurance_name
 
-    for loader_path in loader_list:
-        loader = load_loader(loader_path)
-        print(loader_path)
-        print((loader.docs[0].page_content))
-        print("===============\n")
+
+if __name__ == "__main__":
+    loader = load_loader("data/dataloaders/KB_dog_loader.pkl")
+    for i in range(0, 30):
+        print(i)
+        print((loader.docs[i].page_content))
+        print("=================================")
