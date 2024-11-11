@@ -3,6 +3,7 @@ from langchain import PromptTemplate, LLMChain
 from langchain.chains import RetrievalQA
 from langchain_openai import ChatOpenAI
 from loaders.vectorstore import *
+import json
 
 
 class SummaryBot:
@@ -97,7 +98,9 @@ def get_insurance(company):
 if __name__ == "__main__":
     load_dotenv()
 
-    loader = load_loader("data/dataloaders/KB_dog_loader.pkl")
+    company_name = "KB_dog"
+    loader_path = f"data/dataloaders/{company_name}_loader.pkl"
+    loader = load_loader(loader_path)
     vectordb = load_vectorstore("KB_dog-store", loader)
 
     bot = SummaryBot(
@@ -106,3 +109,7 @@ if __name__ == "__main__":
 
     summary = bot.summarize()
     print(summary["text"])
+
+    output_filename = f"data/json/summaries/{company_name}_output.json"
+    with open(output_filename, "w", encoding="utf-8") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=4)
