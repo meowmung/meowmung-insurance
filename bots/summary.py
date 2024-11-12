@@ -3,7 +3,9 @@ from langchain import PromptTemplate, LLMChain
 from langchain.chains import RetrievalQA
 from langchain_openai import ChatOpenAI
 from loaders.vectorstore import *
+from loaders.dataloader import extract_company_name
 import json
+import glob
 
 
 class SummaryBot:
@@ -53,10 +55,12 @@ class SummaryBot:
         question="주어진 context 내에 존재하는 모든 특약들에 대한 정보를 검색해주세요",
     ):
         result = self.retriever.get_relevant_documents(question)
-        company = result[0].metadata["insurance"]
+        company = result[0].metadata["company"]
         insurance = get_insurance(company)
 
         special_terms = self.vectorstore.loader.special_terms
+        print(special_terms)
+        print("+++++++++++++++++++++++")
 
         context = "\n".join(
             [
@@ -87,7 +91,7 @@ def get_insurance(company):
         "KB_dog": "KB 다이렉트 금쪽같은 펫보험 (강아지) (무배당)",
         "KB_cat": "KB 다이렉트 금쪽같은 펫보험 (고양이) (무배당)",
         "meritz_dog": "(무)펫퍼민트 Puppy&Family 보험 다이렉트",
-        "mertiz_cat": "(무)펫퍼민트 Cat&Family 보험 다이렉트",
+        "meritz_cat": "(무)펫퍼민트 Cat&Family 보험 다이렉트",
         "samsung_dog": "무배당 삼성화재 다이렉트 반려견보험",
         "samsung_cat": "무배당 삼성화재 다이렉트 반려묘보험",
     }
@@ -95,21 +99,44 @@ def get_insurance(company):
     return insurance_items[company]
 
 
-if __name__ == "__main__":
-    load_dotenv()
-
-    company_name = "KB_dog"
-    loader_path = f"data/dataloaders/{company_name}_loader.pkl"
+def save_summaries(company):
+    loader_path = f"data/dataloaders/{company}_loader.pkl"
     loader = load_loader(loader_path)
-    vectordb = load_vectorstore("KB_dog-store", loader)
+    vectordb = load_vectorstore(f"{company}_store", loader)
 
     bot = SummaryBot(
         model_name="gpt-4-turbo", streaming=False, temperature=0, vectorstore=vectordb
     )
 
     summary = bot.summarize()
-    print(summary["text"])
 
-    output_filename = f"data/json/summaries/{company_name}_output.json"
+    output_filename = f"data/json/summaries/{company}_output.json"
     with open(output_filename, "w", encoding="utf-8") as f:
-        json.dump(summary, f, ensure_ascii=False, indent=4)
+        json.dump(summary["text"], f, ensure_ascii=False, indent=4)
+
+
+if __name__ == "__main__":
+    load_dotenv()
+    file_paths = glob.glob(f"data/pdf/*.pdf")
+
+    for path in file_paths:
+        company = extract_company_name(path)
+        save_summaries(company)
+
+    # ----- debug by file ------
+    # company_name = "DB_cat"
+    # loader_path = f"data/dataloaders/{company_name}_loader.pkl"
+    # loader = load_loader(loader_path)
+    # vectordb = load_vectorstore("DB_cat_store", loader)
+
+    # bot = SummaryBot(
+    #     model_name="gpt-4-turbo", streaming=False, temperature=0, vectorstore=vectordb
+    # )
+
+    # summary = bot.summarize()
+    # print(summary["text"])
+
+    # ----- debug saving -----
+    # output_filename = f"data/json/summaries/{company_name}_output.json"
+    # with open(output_filename, "w", encoding="utf-8") as f:
+    #     json.dump(summary, f, ensure_ascii=False, indent=4)

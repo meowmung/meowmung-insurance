@@ -34,14 +34,14 @@ class Loader:
         )
 
         for path in file_paths:
-            insurance_name = extract_insurance_name(path)
+            company_name = extract_company_name(path)
             loader = PyPDFLoader(path)
             doc_list = loader.load_and_split()
             for doc_index, doc in enumerate(doc_list):
-                doc.metadata["insurance"] = insurance_name
+                doc.metadata["company"] = company_name
                 chunks = text_splitter.split_text(doc.page_content)
                 for chunk_index, chunk in enumerate(chunks):
-                    doc_id = f"{insurance_name}_{doc_index}_{chunk_index}"
+                    doc_id = f"{company_name}_{doc_index}_{chunk_index}"
                     docs.append(
                         Document(
                             page_content=chunk, metadata=doc.metadata, doc_id=doc_id
@@ -52,7 +52,7 @@ class Loader:
 
     def load_file(self, file_path, chunk_size=500, overlap=50):
         docs = []
-        insurance_name = extract_insurance_name(file_path)
+        company_name = extract_company_name(file_path)
         loader = PyPDFLoader(file_path)
         doc_list = loader.load_and_split()
 
@@ -60,10 +60,10 @@ class Loader:
             chunk_size=chunk_size, chunk_overlap=overlap
         )
         for doc_index, doc in enumerate(doc_list):
-            doc.metadata["insurance"] = insurance_name
+            doc.metadata["company"] = company_name
             chunks = text_splitter.split_text(doc.page_content)
             for chunk_index, chunk in enumerate(chunks):
-                doc_id = f"{insurance_name}_{doc_index}_{chunk_index}"
+                doc_id = f"{company_name}_{doc_index}_{chunk_index}"
                 docs.append(
                     Document(page_content=chunk, metadata=doc.metadata, doc_id=doc_id)
                 )
@@ -93,13 +93,13 @@ def load_loader(filepath):
     return loader
 
 
-def extract_insurance_name(file_path):
-    insurance_name = Path(file_path).stem
-    return insurance_name
+def extract_company_name(file_path):
+    company_name = Path(file_path).stem
+    return company_name
 
 
 if __name__ == "__main__":
     loader = load_loader("data/dataloaders/KB_dog_loader.pkl")
-    print((loader.docs[0].page_content))
+    print((loader.docs[0].metadata))
     print("=================================")
     print(loader.special_terms)

@@ -45,7 +45,7 @@ def load_vectorstore(collection_name, loader):
 if __name__ == "__main__":
     load_dotenv()
 
-    loader = load_loader("data/dataloaders/KB_dog_loader.pkl")
-    vectordb = load_vectorstore("KB_dog_store", loader)
+    loader = load_loader("data/dataloaders/DB_dog_loader.pkl")
+    vectordb = load_vectorstore("DB_dog_store", loader)
 
     print(vectordb._collection.count())

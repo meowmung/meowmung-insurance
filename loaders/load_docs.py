@@ -3,16 +3,17 @@ from loaders.vectorstore import VectorStore
 from langchain_openai import OpenAIEmbeddings
 from chromadb.config import Settings
 from dotenv import load_dotenv
+import glob
 
 
 def load_by_insurance(file_path):
-    insurance_name = extract_insurance_name(file_path)
+    insurance_name = extract_company_name(file_path)
     loader = Loader(file_path=file_path)
     loader.save_loader(f"data/dataloaders/{insurance_name}_loader.pkl")
 
 
 def store_by_insurance(file_path):
-    insurance_name = extract_insurance_name(file_path)
+    insurance_name = extract_company_name(file_path)
     loader = load_loader(f"data/dataloaders/{insurance_name}_loader.pkl")
     vectordb = VectorStore(
         collection_name=f"{insurance_name}_store",
@@ -24,13 +25,10 @@ def store_by_insurance(file_path):
 
 
 if __name__ == "__main__":
+
     load_dotenv()
+    file_paths = glob.glob(f"data/pdf/*.pdf")
 
-    # file_paths = glob(f"data/pdf/*.pdf")
-    # for path in file_paths:
-    #     load_by_insurance(path)
-    #     store_by_insurance(path)
-
-    path = "data/pdf/KB_dog.pdf"
-    load_by_insurance(path)
-    store_by_insurance(path)
+    for path in file_paths:
+        load_by_insurance(path)
+        store_by_insurance(path)
