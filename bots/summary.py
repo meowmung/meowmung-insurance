@@ -51,7 +51,7 @@ class SummaryBot:
 
     def summarize(
         self,
-        question="special_terms 에 명시된 모든 특약들의 정보를 주어진 context 내애서 정보를 검색해주세요",
+        question="special_terms 에 명시된 모든 특약들의 정보를 주어진 context 내애서 정보를 검색해주세요. 누락되는 특약이 있으면 안됩니다.",
     ):
         result = self.retriever.get_relevant_documents(question)
         company = result[0].metadata["company"]
@@ -67,6 +67,13 @@ class SummaryBot:
                 if any(term["name"] in doc.page_content for term in special_terms)
             ]
         )
+
+        missing_terms = [
+            term["name"] for term in special_terms if term["name"] not in context
+        ]
+
+        if missing_terms:
+            print(f"누락된 특약: {missing_terms}")
 
         response = self.qa_chain.invoke(
             {
@@ -103,7 +110,7 @@ def save_summaries(company):
     vectordb = load_vectorstore(f"{company}_store", loader)
 
     bot = SummaryBot(
-        model_name="gpt-4-turbo", streaming=False, temperature=0, vectorstore=vectordb
+        model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
     )
 
     summary = bot.summarize()
@@ -132,17 +139,17 @@ if __name__ == "__main__":
     #     save_summaries(company)
 
     # ----- debug by file ------
-    company_name = "samsung_dog"
+    company_name = "KB_dog"
     loader_path = f"data/dataloaders/{company_name}_loader.pkl"
     loader = load_loader(loader_path)
-    vectordb = load_vectorstore("samsung_dog_store", loader)
+    vectordb = load_vectorstore("KB_dog_store", loader)
 
     bot = SummaryBot(
-        model_name="gpt-4-turbo", streaming=False, temperature=0, vectorstore=vectordb
+        model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
     )
 
     summary = bot.summarize()
-    print(summary["text"])
+    print(clean_json(summary["text"]))
 
     # ----- debug saving -----
     output_filename = f"data/json/summaries/{company_name}_output.json"
