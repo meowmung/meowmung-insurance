@@ -28,7 +28,9 @@ class SummaryBot:
             1. 보험 회사 이름(company): {company}
             2. 보험 상품 명(insurance): {insurance}
             3. 세부 특수약관(특약)들(special terms): 보험 상품에 존재하는 모든 세부 특수약관(특약)들에 대한 정보를 검색하고, 각 약관에 대한 정보를 JSON 형태로 제공하세요.
+            응답은 반드시 json 형태여야 합니다. ```json 등의 감싸기는 제거하세요.
             세부 특수 약관의 이름들의 목록은 다음과 같습니다: {special_terms}
+            special_terms 배열에 있는 이름들은 반드시 문서에 존재하기 때문에, 반드시 찾아서 정보를 제공해야 합니다.
             괄호 안에 주어진 정보는 key 의 이름입니다.
             문서 내 명시된 모든 특약 이름과 정보들을 찾으세요.
             검색해야 할 정보는:
@@ -36,9 +38,6 @@ class SummaryBot:
                 * 보험금 지급사유 (causes)
                 * 보험금 지급 세부사항 (details)
                 * 보상 금액 한도 (limit)
-
-            제공된 문서 내의 검색 결과에만 기반하여 응답하세요. 절대로 임의의 정보를 생성하지 마세요.
-            특약 이름에 대한 응답 생성 시서로 다른 문장 내의 단어들을 조합하지 마세요.
 
             {context}
 
@@ -52,7 +51,7 @@ class SummaryBot:
 
     def summarize(
         self,
-        question="주어진 context 내에 존재하는 모든 특약들에 대한 정보를 검색해주세요",
+        question="special_terms 에 명시된 모든 특약들의 정보를 주어진 context 내애서 정보를 검색해주세요. 누락되는 특약이 있으면 안됩니다.",
     ):
         result = self.retriever.get_relevant_documents(question)
         company = result[0].metadata["company"]
@@ -60,7 +59,6 @@ class SummaryBot:
 
         special_terms = self.vectorstore.loader.special_terms
         print(special_terms)
-        print("+++++++++++++++++++++++")
 
         context = "\n".join(
             [
@@ -69,6 +67,37 @@ class SummaryBot:
                 if any(term["name"] in doc.page_content for term in special_terms)
             ]
         )
+
+        missing_terms = [
+            term["name"] for term in special_terms if term["name"] not in context
+        ]
+
+        prev_missing_terms = []
+        max_attempts = 5
+        attempt_count = 0
+
+        while len(missing_terms) > 0 and attempt_count < max_attempts:
+            print(f"누락된 특약: {missing_terms}")
+
+            additional_docs = self.retriever.get_relevant_documents(
+                f"누락된 특약: {', '.join(missing_terms)}에 대한 정보를 찾으세요."
+            )
+
+            additional_context = "\n".join(
+                [doc.page_content for doc in additional_docs]
+            )
+            context += additional_context
+
+            missing_terms = [
+                term["name"] for term in special_terms if term["name"] not in context
+            ]
+
+            if missing_terms == prev_missing_terms:
+                print("누락된 특약이 더 이상 변경되지 않으므로 반복을 종료합니다.")
+                break
+
+            prev_missing_terms = missing_terms
+            attempt_count += 1
 
         response = self.qa_chain.invoke(
             {
@@ -102,17 +131,30 @@ def get_insurance(company):
 def save_summaries(company):
     loader_path = f"data/dataloaders/{company}_loader.pkl"
     loader = load_loader(loader_path)
-    vectordb = load_vectorstore(f"{company}_store", loader)
+    vectorhyundai = load_vectorstore(f"{company}_store", loader)
 
     bot = SummaryBot(
-        model_name="gpt-4-turbo", streaming=False, temperature=0, vectorstore=vectordb
+        model_name="gpt-4-turbo",
+        streaming=False,
+        temperature=0,
+        vectorstore=vectorhyundai,
     )
 
     summary = bot.summarize()
 
     output_filename = f"data/json/summaries/{company}_output.json"
     with open(output_filename, "w", encoding="utf-8") as f:
-        json.dump(summary["text"], f, ensure_ascii=False, indent=4)
+        json.dump(clean_json(summary["text"]), f, ensure_ascii=False, indent=4)
+
+
+def clean_json(text):
+    cleaned_text = text.replace("\n", "").replace("    ", "").strip()
+
+    try:
+        return json.loads(cleaned_text)
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON: {e}")
+        return {}
 
 
 if __name__ == "__main__":
@@ -124,19 +166,19 @@ if __name__ == "__main__":
         save_summaries(company)
 
     # ----- debug by file ------
-    # company_name = "DB_cat"
+    # company_name = "hyundai_dog"
     # loader_path = f"data/dataloaders/{company_name}_loader.pkl"
     # loader = load_loader(loader_path)
-    # vectordb = load_vectorstore("DB_cat_store", loader)
+    # vectordb = load_vectorstore("hyundai_dog_store", loader)
 
     # bot = SummaryBot(
-    #     model_name="gpt-4-turbo", streaming=False, temperature=0, vectorstore=vectordb
+    #     model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
     # )
 
     # summary = bot.summarize()
-    # print(summary["text"])
+    # print(clean_json(summary["text"]))
 
     # ----- debug saving -----
     # output_filename = f"data/json/summaries/{company_name}_output.json"
     # with open(output_filename, "w", encoding="utf-8") as f:
-    #     json.dump(summary, f, ensure_ascii=False, indent=4)
+    #     json.dump(clean_json(summary["text"]), f, ensure_ascii=False, indent=4)
