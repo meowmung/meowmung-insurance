@@ -3,6 +3,7 @@ from langchain_openai import OpenAIEmbeddings
 from dotenv import load_dotenv
 from loaders.dataloader import *
 from chromadb.config import Settings
+from chromadb import Client
 
 
 class VectorStore(Chroma):
@@ -45,7 +46,14 @@ def load_vectorstore(collection_name, loader):
 if __name__ == "__main__":
     load_dotenv()
 
-    loader = load_loader("data/dataloaders/DB_dog_loader.pkl")
-    vectordb = load_vectorstore("DB_dog_store", loader)
+    loader = load_loader("data/dataloaders/cat_loader.pkl")
+    vectordb = VectorStore(
+        collection_name="cat_store",
+        embedding_function=OpenAIEmbeddings(),
+        client_settings=Settings(persist_directory="data/db", is_persistent=True),
+        loader=loader,
+    )
+
+    vectordb.add_docs()
 
     print(vectordb._collection.count())
