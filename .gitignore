@@ -130,6 +130,7 @@ ENV/
 env.bak/
 venv.bak/
 data/
+!data/json/summaries/
 
 # Spyder project settings
 .spyderproject
