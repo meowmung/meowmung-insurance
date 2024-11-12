@@ -72,8 +72,32 @@ class SummaryBot:
             term["name"] for term in special_terms if term["name"] not in context
         ]
 
-        if missing_terms:
+        prev_missing_terms = []
+        max_attempts = 5
+        attempt_count = 0
+
+        while len(missing_terms) > 0 and attempt_count < max_attempts:
             print(f"누락된 특약: {missing_terms}")
+
+            additional_docs = self.retriever.get_relevant_documents(
+                f"누락된 특약: {', '.join(missing_terms)}에 대한 정보를 찾으세요."
+            )
+
+            additional_context = "\n".join(
+                [doc.page_content for doc in additional_docs]
+            )
+            context += additional_context
+
+            missing_terms = [
+                term["name"] for term in special_terms if term["name"] not in context
+            ]
+
+            if missing_terms == prev_missing_terms:
+                print("누락된 특약이 더 이상 변경되지 않으므로 반복을 종료합니다.")
+                break
+
+            prev_missing_terms = missing_terms
+            attempt_count += 1
 
         response = self.qa_chain.invoke(
             {
@@ -107,10 +131,13 @@ def get_insurance(company):
 def save_summaries(company):
     loader_path = f"data/dataloaders/{company}_loader.pkl"
     loader = load_loader(loader_path)
-    vectordb = load_vectorstore(f"{company}_store", loader)
+    vectorhyundai = load_vectorstore(f"{company}_store", loader)
 
     bot = SummaryBot(
-        model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
+        model_name="gpt-4-turbo",
+        streaming=False,
+        temperature=0,
+        vectorstore=vectorhyundai,
     )
 
     summary = bot.summarize()
@@ -132,26 +159,26 @@ def clean_json(text):
 
 if __name__ == "__main__":
     load_dotenv()
-    # file_paths = glob.glob(f"data/pdf/*.pdf")
+    file_paths = glob.glob(f"data/pdf/*.pdf")
 
-    # for path in file_paths:
-    #     company = extract_company_name(path)
-    #     save_summaries(company)
+    for path in file_paths:
+        company = extract_company_name(path)
+        save_summaries(company)
 
     # ----- debug by file ------
-    company_name = "KB_dog"
-    loader_path = f"data/dataloaders/{company_name}_loader.pkl"
-    loader = load_loader(loader_path)
-    vectordb = load_vectorstore("KB_dog_store", loader)
+    # company_name = "hyundai_dog"
+    # loader_path = f"data/dataloaders/{company_name}_loader.pkl"
+    # loader = load_loader(loader_path)
+    # vectordb = load_vectorstore("hyundai_dog_store", loader)
 
-    bot = SummaryBot(
-        model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
-    )
+    # bot = SummaryBot(
+    #     model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
+    # )
 
-    summary = bot.summarize()
-    print(clean_json(summary["text"]))
+    # summary = bot.summarize()
+    # print(clean_json(summary["text"]))
 
     # ----- debug saving -----
-    output_filename = f"data/json/summaries/{company_name}_output.json"
-    with open(output_filename, "w", encoding="utf-8") as f:
-        json.dump(clean_json(summary["text"]), f, ensure_ascii=False, indent=4)
+    # output_filename = f"data/json/summaries/{company_name}_output.json"
+    # with open(output_filename, "w", encoding="utf-8") as f:
+    #     json.dump(clean_json(summary["text"]), f, ensure_ascii=False, indent=4)
