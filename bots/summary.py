@@ -29,6 +29,7 @@ class SummaryBot:
             2. 보험 상품 명(insurance): {insurance}
             3. 세부 특수약관(특약)들(special terms): 보험 상품에 존재하는 모든 세부 특수약관(특약)들에 대한 정보를 검색하고, 각 약관에 대한 정보를 JSON 형태로 제공하세요.
             세부 특수 약관의 이름들의 목록은 다음과 같습니다: {special_terms}
+            special_terms 배열에 있는 이름들은 반드시 문서에 존재하기 때문에, 반드시 찾아서 정보를 제공해야 합니다.
             괄호 안에 주어진 정보는 key 의 이름입니다.
             문서 내 명시된 모든 특약 이름과 정보들을 찾으세요.
             검색해야 할 정보는:
@@ -39,6 +40,7 @@ class SummaryBot:
 
             제공된 문서 내의 검색 결과에만 기반하여 응답하세요. 절대로 임의의 정보를 생성하지 마세요.
             특약 이름에 대한 응답 생성 시서로 다른 문장 내의 단어들을 조합하지 마세요.
+            출력된 결과를 .json 파일로 저장할 것이기 때문에, 불필요한 공백과 개행문자 등의 문자는 제거하고 답하세요. 또한, ``` 등의 문자로 응답을 감싸지 마세요.
 
             {context}
 
@@ -59,6 +61,7 @@ class SummaryBot:
         insurance = get_insurance(company)
 
         special_terms = self.vectorstore.loader.special_terms
+        print(special_terms)
 
         context = "\n".join(
             [
@@ -110,13 +113,41 @@ def save_summaries(company):
 
     output_filename = f"data/json/summaries/{company}_output.json"
     with open(output_filename, "w", encoding="utf-8") as f:
-        json.dump(summary["text"], f, ensure_ascii=False, indent=4)
+        json.dump(clean_json(summary["text"]), f, ensure_ascii=False, indent=4)
+
+
+def clean_json(text):
+    cleaned_text = text.replace("\n", "").replace("    ", "").strip()
+
+    try:
+        return json.loads(cleaned_text)
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON: {e}")
+        return {}
 
 
 if __name__ == "__main__":
     load_dotenv()
-    file_paths = glob.glob(f"data/pdf/*.pdf")
+    # file_paths = glob.glob(f"data/pdf/*.pdf")
 
-    for path in file_paths:
-        company = extract_company_name(path)
-        save_summaries(company)
+    # for path in file_paths:
+    #     company = extract_company_name(path)
+    #     save_summaries(company)
+
+    # ----- debug by file ------
+    company_name = "samsung_dog"
+    loader_path = f"data/dataloaders/{company_name}_loader.pkl"
+    loader = load_loader(loader_path)
+    vectordb = load_vectorstore("samsung_dog_store", loader)
+
+    bot = SummaryBot(
+        model_name="gpt-4-turbo", streaming=False, temperature=0, vectorstore=vectordb
+    )
+
+    summary = bot.summarize()
+    print(summary["text"])
+
+    # ----- debug saving -----
+    output_filename = f"data/json/summaries/{company_name}_output.json"
+    with open(output_filename, "w", encoding="utf-8") as f:
+        json.dump(clean_json(summary["text"]), f, ensure_ascii=False, indent=4)
