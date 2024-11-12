@@ -28,6 +28,7 @@ class SummaryBot:
             1. 보험 회사 이름(company): {company}
             2. 보험 상품 명(insurance): {insurance}
             3. 세부 특수약관(특약)들(special terms): 보험 상품에 존재하는 모든 세부 특수약관(특약)들에 대한 정보를 검색하고, 각 약관에 대한 정보를 JSON 형태로 제공하세요.
+            응답은 반드시 json 형태여야 합니다. ```json 등의 감싸기는 제거하세요.
             세부 특수 약관의 이름들의 목록은 다음과 같습니다: {special_terms}
             special_terms 배열에 있는 이름들은 반드시 문서에 존재하기 때문에, 반드시 찾아서 정보를 제공해야 합니다.
             괄호 안에 주어진 정보는 key 의 이름입니다.
@@ -37,10 +38,6 @@ class SummaryBot:
                 * 보험금 지급사유 (causes)
                 * 보험금 지급 세부사항 (details)
                 * 보상 금액 한도 (limit)
-
-            제공된 문서 내의 검색 결과에만 기반하여 응답하세요. 절대로 임의의 정보를 생성하지 마세요.
-            특약 이름에 대한 응답 생성 시서로 다른 문장 내의 단어들을 조합하지 마세요.
-            출력된 결과를 .json 파일로 저장할 것이기 때문에, 불필요한 공백과 개행문자 등의 문자는 제거하고 답하세요. 또한, ``` 등의 문자로 응답을 감싸지 마세요.
 
             {context}
 
@@ -54,7 +51,7 @@ class SummaryBot:
 
     def summarize(
         self,
-        question="주어진 context 내에 존재하는 모든 특약들에 대한 정보를 검색해주세요",
+        question="special_terms 에 명시된 모든 특약들의 정보를 주어진 context 내애서 정보를 검색해주세요",
     ):
         result = self.retriever.get_relevant_documents(question)
         company = result[0].metadata["company"]
