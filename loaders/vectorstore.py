@@ -1,19 +1,20 @@
 from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
 from dotenv import load_dotenv
-from loaders.dataloader import Loader
+from loaders.dataloader import *
 from chromadb.config import Settings
 
 
 class VectorStore(Chroma):
-    def __init__(self, collection_name, embedding_function, client_settings):
+    def __init__(self, collection_name, embedding_function, client_settings, loader):
         super().__init__(
             collection_name=collection_name,
             embedding_function=embedding_function,
             client_settings=client_settings,
         )
+        self.loader = loader
 
-    def add_docs(self, loader):
+    def add_docs(self):
         """
         docs: list
             list of chunks of pdf to add (type: Documents)
@@ -21,45 +22,30 @@ class VectorStore(Chroma):
         vectordb: chromadb.Collection
             db of embeddings
 
-        returns: vectordb w/ new data added (skip existing data)
+        returns: vectordb w/ new data added
         """
-        docs_tostr = [doc.page_content for doc in loader.docs]
-        emb_func = OpenAIEmbeddings()
-        embeddings = emb_func.embed_documents(docs_tostr)
-        ids = loader.name_list
+        doc_text = [doc.page_content for doc in self.loader.docs]
+        embedding_function = OpenAIEmbeddings()
+        embeddings = embedding_function.embed_documents(doc_text)
 
-        existing_ids = set(self.get(ids=ids)["ids"])
+        self.add_documents(documents=self.loader.docs, embeddings=embeddings)
 
-        new_docs = []
-        new_embeddings = []
-        new_ids = []
 
-        for i, doc_id in enumerate(ids):
-            if doc_id not in existing_ids:
-                new_docs.append(loader.docs[i])
-                new_embeddings.append(embeddings[i])
-                new_ids.append(doc_id)
+def load_vectorstore(collection_name, loader):
+    vectordb = VectorStore(
+        collection_name=collection_name,
+        embedding_function=OpenAIEmbeddings(),
+        client_settings=Settings(persist_directory="data/db", is_persistent=True),
+        loader=loader,
+    )
 
-        if new_docs:
-            self.add_documents(
-                documents=new_docs, embeddings=new_embeddings, ids=new_ids
-            )
-        else:
-            print("no new docs - data with same IDs ignored")
+    return vectordb
 
 
 if __name__ == "__main__":
     load_dotenv()
 
-    vectordb = VectorStore(
-        collection_name="pet-insurance",
-        embedding_function=OpenAIEmbeddings(),
-        client_settings=Settings(persist_directory="data/db", is_persistent=True),
-    )
-
-    print(vectordb._collection.count())
-
-    loader = Loader("data/pdf")
-    vectordb.add_docs(loader)
+    loader = load_loader("data/dataloaders/DB_dog_loader.pkl")
+    vectordb = load_vectorstore("DB_dog_store", loader)
 
     print(vectordb._collection.count())

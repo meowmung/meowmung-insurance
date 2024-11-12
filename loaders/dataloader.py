@@ -1,49 +1,89 @@
 from langchain_community.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from glob import glob
 import pickle
+from pathlib import Path
+import re
+
+
+class Document:
+    def __init__(self, page_content, metadata=None, doc_id=None):
+        self.page_content = page_content
+        self.metadata = metadata or {}
+        self.id = doc_id
+
+    def add_metadata(self, key, value):
+        self.metadata[key] = value
 
 
 class Loader:
-    def __init__(self, dir_path):
-        self.docs = self.load_pdf(dir_path)
-        self.name_list = self.name_doc(self.docs)
+    def __init__(self, dir_path=None, file_path=None):
+        if file_path:
+            self.docs = self.load_file(file_path)
+        elif dir_path:
+            self.docs = self.load_dir(dir_path)
+        else:
+            raise ValueError("Either 'dir_path' or 'file_path' must be provided.")
+        self.special_terms = extract_special_terms(self)
 
-    def load_pdf(self, dir_path):
-        """
-        dir_path: string
-            path to dir containing pdf data
-
-        returns: list of chunks of pdf (type: Documents)
-        """
+    def load_dir(self, dir_path, chunk_size=500, overlap=50):
         docs = []
         file_paths = glob(f"{dir_path}/*.pdf")
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size, chunk_overlap=overlap
+        )
 
         for path in file_paths:
+            company_name = extract_company_name(path)
             loader = PyPDFLoader(path)
             doc_list = loader.load_and_split()
-            for doc in doc_list:
-                docs.append(doc)
+            for doc_index, doc in enumerate(doc_list):
+                doc.metadata["company"] = company_name
+                chunks = text_splitter.split_text(doc.page_content)
+                for chunk_index, chunk in enumerate(chunks):
+                    doc_id = f"{company_name}_{doc_index}_{chunk_index}"
+                    docs.append(
+                        Document(
+                            page_content=chunk, metadata=doc.metadata, doc_id=doc_id
+                        )
+                    )
 
         return docs
 
-    def name_doc(self, docs):
-        """
-        docs: list
-            list of chunks of pdf (type: Documents)
+    def load_file(self, file_path, chunk_size=500, overlap=50):
+        docs = []
+        company_name = extract_company_name(file_path)
+        loader = PyPDFLoader(file_path)
+        doc_list = loader.load_and_split()
 
-        returns: list of names of chunks (will be used as doc ID)
-        """
-        name_list = []
-        for i in range(len(docs)):
-            source = docs[i].metadata["source"]
-            page = docs[i].metadata["page"]
-            name_list.append(f"{source}_page{page}")
-
-        return name_list
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size, chunk_overlap=overlap
+        )
+        for doc_index, doc in enumerate(doc_list):
+            doc.metadata["company"] = company_name
+            chunks = text_splitter.split_text(doc.page_content)
+            for chunk_index, chunk in enumerate(chunks):
+                doc_id = f"{company_name}_{doc_index}_{chunk_index}"
+                docs.append(
+                    Document(page_content=chunk, metadata=doc.metadata, doc_id=doc_id)
+                )
+        return docs
 
     def save_loader(self, filepath):
         with open(filepath, "wb") as file:
             pickle.dump(self, file)
+
+
+def extract_special_terms(loader):
+    special_terms = []
+    pattern = r"특약 이름\s?\[([^\]]+)\]"
+
+    for doc in loader.docs:
+        matches = re.findall(pattern, doc.page_content)
+        for match in matches:
+            special_terms.append({"name": match})
+
+    return special_terms
 
 
 def load_loader(filepath):
@@ -53,14 +93,13 @@ def load_loader(filepath):
     return loader
 
 
+def extract_company_name(file_path):
+    company_name = Path(file_path).stem
+    return company_name
+
+
 if __name__ == "__main__":
-    # loader = Loader("data/pdf")
-    # print(loader.docs[0])
-    # for i in range(len(loader.docs)):
-    #     print(loader.docs[i].metadata["source"])
-    # loader.save_loader("data/dataloaders/raw.pkl")
-
-    loader = load_loader("data/dataloaders/raw.pkl")
-
-    for i in range(0, 10):
-        print(loader.docs[i])
+    loader = load_loader("data/dataloaders/KB_dog_loader.pkl")
+    print((loader.docs[0].metadata))
+    print("=================================")
+    print(loader.special_terms)
