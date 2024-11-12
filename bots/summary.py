@@ -59,8 +59,6 @@ class SummaryBot:
         insurance = get_insurance(company)
 
         special_terms = self.vectorstore.loader.special_terms
-        print(special_terms)
-        print("+++++++++++++++++++++++")
 
         context = "\n".join(
             [
@@ -122,21 +120,3 @@ if __name__ == "__main__":
     for path in file_paths:
         company = extract_company_name(path)
         save_summaries(company)
-
-    # ----- debug by file ------
-    # company_name = "DB_cat"
-    # loader_path = f"data/dataloaders/{company_name}_loader.pkl"
-    # loader = load_loader(loader_path)
-    # vectordb = load_vectorstore("DB_cat_store", loader)
-
-    # bot = SummaryBot(
-    #     model_name="gpt-4-turbo", streaming=False, temperature=0, vectorstore=vectordb
-    # )
-
-    # summary = bot.summarize()
-    # print(summary["text"])
-
-    # ----- debug saving -----
-    # output_filename = f"data/json/summaries/{company_name}_output.json"
-    # with open(output_filename, "w", encoding="utf-8") as f:
-    #     json.dump(summary, f, ensure_ascii=False, indent=4)
