@@ -25,7 +25,7 @@ class RecommendBot:
             template="""당신은 반려견과 반려묘를 위한 보험 상품을 추천하는 챗봇입니다.
             사용자는 다음과 같은 특징을 입력할 것입니다:
             1. 반려동물 종류: {pet_type}
-            반려동물 종류에 맞는 보험 상품을 추천해야 합니다. 예를 들어, pet_type=dog 인데 DB_cat 처럼 고양이의 보험을 추천해선 안됩니다.
+            반려동물 종류에 맞는 보험 상품을 추천해야 합니다. 예를 들어, pet_type=dog 일 때 cat 이 포함된 고양이의 보험을 추천해선 안됩니다.
             2. 품종: {breed}
             3. 나이: {age}
             4. 성별: {gender}
@@ -65,7 +65,7 @@ class RecommendBot:
         gender,
         neutered,
         concerned_illnesses,
-        question="",
+        question="입력된 concerned_illnesses 배열에 나열된 질병들을 보장하는 특약이 가장 많은 보험 상품 3개와 해당하는 특약들을 출력하세요.",
     ):
         result = self.retriever.get_relevant_documents(question)
         context = "\n".join([doc.page_content for doc in result])
@@ -95,15 +95,16 @@ class RecommendBot:
 if __name__ == "__main__":
     load_dotenv()
 
-    loader = load_loader("data/dataloaders/json_loader.pkl")
-    vectordb = load_vectorstore(collection_name="json_store", loader=loader)
+    pet_type = "dog"
+    loader = load_loader(f"data/dataloaders/{pet_type}_loader.pkl")
+    vectordb = load_vectorstore(collection_name=f"{pet_type}_store", loader=loader)
 
     chatbot = RecommendBot(
         model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
     )
 
     response = chatbot.recommend(
-        pet_type="dog",
+        pet_type=pet_type,
         breed="닥스훈트",
         age="4",
         gender="F",
