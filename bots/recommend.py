@@ -1,61 +1,15 @@
 from dotenv import load_dotenv
-from langchain import PromptTemplate, LLMChain
-from langchain.chains import RetrievalQA
 from langchain_openai import ChatOpenAI
 from loaders.vectorstore import *
 
 
 class RecommendBot:
-
     def __init__(self, model_name, streaming, temperature, vectorstore):
         self.llm = ChatOpenAI(
             model_name=model_name, streaming=streaming, temperature=temperature
         )
-        self.template = PromptTemplate(
-            input_variables=[
-                "context",
-                "question",
-                "pet_type",
-                "breed",
-                "age",
-                "gender",
-                "neutered",
-                "concerned_illnesses",
-            ],
-            template="""당신은 반려견과 반려묘를 위한 보험 상품을 추천하는 챗봇입니다.
-            사용자는 다음과 같은 특징을 입력할 것입니다:
-            1. 반려동물 종류: {pet_type}
-            반려동물 종류에 맞는 보험 상품을 추천해야 합니다. 예를 들어, pet_type=dog 일 때 cat 이 포함된 고양이의 보험을 추천해선 안됩니다.
-            2. 품종: {breed}
-            3. 나이: {age}
-            4. 성별: {gender}
-            5. 중성화 여부: {neutered}
-            6. 걱정되는 질병: {concerned_illnesses}
-
-            입력된 특징을 사용하여 제공된 컨텍스트에서 가장 적합한 보험 상품과 특약을 찾으세요.
-            제공되는 반려동물의 조건과 가장 유사한 특약을 가지는 서로 다른 회사의 보험 상품 3개를 추천해야 합니다.
-            회사가 중복되어선 안됩니다.
-            
-            추천할 회사를 찾았다면, 해당 회사에서 제공하는 보험 상품의 특약들에 대한 정보를 제공하세요.
-            특약들에 대한 정보는 제공된 context 에서 그대로 가져오면 됩니다.
-            문서에서 제공되지 않는 단어는 출력되는 JSON 데이터 포함되어서는 안됩니다.
-
-            다음 JSON 형식으로 응답하세요:
-                "insurance": 출처 문서 파일 이름에 나와 있는 보험사 이름,
-                "special_contracts": [입력된 특징과 가장 잘 맞는 특약 리스트]
-
-            최종 답변에는 총 3개의 JSON 데이터가 포함됩니다.
-
-            {context}
-
-            질문: {question}
-            답변:
-            """,
-        )
-
         self.vectorstore = vectorstore
         self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 3})
-        self.qa_chain = LLMChain(prompt=self.template, llm=self.llm)
 
     def recommend(
         self,
@@ -65,30 +19,38 @@ class RecommendBot:
         gender,
         neutered,
         concerned_illnesses,
-        question="입력된 concerned_illnesses 배열에 나열된 질병들을 보장하는 특약이 가장 많은 보험 상품 3개와 해당하는 특약들을 출력하세요.",
     ):
-        result = self.retriever.get_relevant_documents(question)
-        context = "\n".join([doc.page_content for doc in result])
-        response = self.qa_chain.invoke(
-            {
-                "pet_type": pet_type,
-                "breed": breed,
-                "age": age,
-                "gender": gender,
-                "neutered": neutered,
-                "concerned_illnesses": concerned_illnesses,
-                "context": context,
-                "question": question,
-            }
+
+        question = (
+            "concerned_illnesses 배열에 나열된 질병들을 보장하는 특약들을 포함하는 "
+            "보험 3개를 추천해주세요."
         )
 
-        if isinstance(response, dict):
-            response = {
-                key: value
-                for key, value in response.items()
-                if key not in ["question", "text"]
-            }
+        result = self.retriever.get_relevant_documents(question)
+        context = "\n".join([doc.page_content for doc in result])
 
+        prompt = f"""
+        당신은 반려견과 반려묘를 위한 보험 상품을 추천하는 챗봇입니다.
+        사용자는 다음과 같은 특징을 입력했습니다:
+        - 반려동물 종류: {pet_type}
+        - 품종: {breed}
+        - 나이: {age}
+        - 성별: {gender}
+        - 중성화 여부: {neutered}
+        - 걱정되는 질병: {', '.join(concerned_illnesses)}
+
+        위 정보를 바탕으로, 제공된 문서에서 이 동물에게 적합한 보험 상품을 3개 추천해주세요.
+        각 보험에 대한 관련 특약만 포함하여 아래 JSON 형식으로 답변하세요:
+        {{
+            "insurance": "보험사 이름",
+            "special_contracts": [context 에 주어진 json 형태의 각 특약의 세부정보]
+        }}
+        답변을 ```json 등의 래퍼로 감싸지 마세요.
+
+        {context}
+        """
+
+        response = self.llm(prompt)
         return response
 
 
@@ -112,4 +74,4 @@ if __name__ == "__main__":
         concerned_illnesses=["슬개골", "치과 치료"],
     )
 
-    print(response)
+    print(response.content)
