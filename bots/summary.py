@@ -4,6 +4,7 @@ from langchain.retrievers.multi_query import MultiQueryRetriever
 from loaders.vectorstore import *
 import json
 import re
+import glob
 
 
 class SummaryBot:
@@ -24,20 +25,16 @@ class SummaryBot:
 
         for term_name in special_terms_name_list:
             question = f"{term_name}에 대한 정보를 context에서 찾아 반환하세요."
-            print("retrieving")
-            print("+++++++++++++++++++++++++++++++++++++++++++++++")
             term_result = self.retriever.get_relevant_documents(question)
 
             details = "\n".join(clean_text(doc.page_content) for doc in term_result)
 
             info = {
-                "name": {term_name},
-                "details": {details},
+                "name": term_name,
+                "details": details,
             }
 
             special_terms_info.append(info)
-            print(f"{term_name} summarized")
-            print("+++++++++++++++++++++++++++++++++++++++++++++++")
 
         insurance_info["special_terms"] = special_terms_info
 
@@ -92,29 +89,29 @@ def save_summaries(company):
     pet_type = company.split("_")[1]
     output_filename = f"summaries/{pet_type}/{company}_output.json"
     with open(output_filename, "w", encoding="utf-8") as f:
-        json.dump(clean_json(summary["text"]), f, ensure_ascii=False, indent=4)
+        json.dump(summary, f, ensure_ascii=False, indent=4)
 
 
 if __name__ == "__main__":
     load_dotenv()
-    # file_paths = glob.glob(f"data/pdf/*.pdf")
+    file_paths = glob.glob(f"data/pdf/*.pdf")
 
-    # for path in file_paths:
-    #     company = extract_company(path)
-    #     save_summaries(company)
+    for path in file_paths:
+        company = extract_company_name(path)
+        save_summaries(company)
 
     # ----- debug by file ------
-    company = "DB_dog"
-    loader_path = f"data/dataloaders/{company}_loader.pkl"
-    loader = load_loader(loader_path)
-    vectordb = load_vectorstore("DB_dog_store", loader)
+    # company = "DB_dog"
+    # loader_path = f"data/dataloaders/{company}_loader.pkl"
+    # loader = load_loader(loader_path)
+    # vectordb = load_vectorstore("DB_dog_store", loader)
 
-    bot = SummaryBot(
-        model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
-    )
+    # bot = SummaryBot(
+    #     model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
+    # )
 
-    summary = bot.summarize(company)
-    print(summary)
+    # summary = bot.summarize(company)
+    # print(summary)
 
     # ----- debug saving -----
     # output_filename = f"data/json/summaries/{company}_output.json"
