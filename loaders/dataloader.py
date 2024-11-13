@@ -93,6 +93,11 @@ def extract_company_name(file_path):
 
 
 if __name__ == "__main__":
-    loader = Loader(dir_path="summaries/cat", has_special_terms=False)
-    print(loader.docs[1].page_content)
-    loader.save_loader("data/dataloaders/cat_loader.pkl")
+    # loader = Loader(dir_path="summaries/cat", has_special_terms=False)
+    # print(loader.docs[1].page_content)
+    # loader.save_loader("data/dataloaders/cat_loader.pkl")
+
+    loader = load_loader("data/dataloaders/KB_dog_loader.pkl")
+    # for i in range(len(loader.docs)):
+    #     print(loader.docs[i].page_content)
+    print(loader.docs[0].metadata)
