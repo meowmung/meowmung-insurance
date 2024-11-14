@@ -23,7 +23,7 @@ class Loader:
         if file_path:
             self.docs = self.load_file(file_path)
         elif dir_path:
-            self.docs = self.load_dir(dir_path)
+            self.docs = self.load_dir_with_metadata(dir_path)
         else:
             raise ValueError("Either 'dir_path' or 'file_path' must be provided.")
         if has_special_terms:
@@ -39,6 +39,26 @@ class Loader:
                     doc = Document(
                         page_content=json.dumps(data, ensure_ascii=False),
                         metadata={"source": filename},
+                        doc_id=filename,
+                    )
+                    docs.append(doc)
+        return docs
+
+    def load_dir_with_metadata(self, dir_path):
+        docs = []
+        for filename in os.listdir(dir_path):
+            if filename.endswith(".json"):
+                file_path = os.path.join(dir_path, filename)
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    doc = Document(
+                        page_content=json.dumps(
+                            data["special_terms"], ensure_ascii=False
+                        ),
+                        metadata={
+                            "company": data["company"],
+                            "insurance": data["insurance"],
+                        },
                         doc_id=filename,
                     )
                     docs.append(doc)
@@ -93,11 +113,20 @@ def extract_company_name(file_path):
 
 
 if __name__ == "__main__":
-    # loader = Loader(dir_path="summaries/cat", has_special_terms=False)
-    # print(loader.docs[1].page_content)
-    # loader.save_loader("data/dataloaders/cat_loader.pkl")
+    pet_types = ["dog", "cat"]
 
-    loader = load_loader("data/dataloaders/KB_dog_loader.pkl")
+    for type in pet_types:
+        loader = Loader(dir_path=f"summaries/{type}", has_special_terms=False)
+        print(loader.docs[1].page_content)
+
+    # --------debug-----------
+    # loader.save_loader("data/dataloaders/dog_loader.pkl")
+
+    # loader = load_loader("data/dataloaders/KB_dog_loader.pkl")
     # for i in range(len(loader.docs)):
     #     print(loader.docs[i].page_content)
-    print(loader.docs[0].metadata)
+    # print(loader.docs[0].metadata)
+
+    # --------debug add metadata-----------
+    # loader = Loader(dir_path="summaries/dog", has_special_terms=False)
+    # print(loader.docs[0].page_content)
