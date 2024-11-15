@@ -33,14 +33,25 @@ class VectorStore(Chroma):
 
 
 def load_vectorstore(collection_name, loader):
-    vectordb = VectorStore(
+    """
+    Collection을 로드하고 벡터 저장소를 반환합니다.
+    이미 저장된 데이터를 불러오는 과정이므로 임베딩을 새로 계산하지 않습니다.
+    """
+    client_settings = Settings(persist_directory="data/db", is_persistent=True)
+
+    client = Client(client_settings)
+    collection = client.get_collection(collection_name)
+
+    vectorstore = VectorStore(
         collection_name=collection_name,
-        embedding_function=OpenAIEmbeddings(),
-        client_settings=Settings(persist_directory="data/db", is_persistent=True),
+        embedding_function=None,
+        client_settings=client_settings,
         loader=loader,
     )
 
-    return vectordb
+    vectorstore._collection = collection
+
+    return vectorstore
 
 
 if __name__ == "__main__":
@@ -50,13 +61,9 @@ if __name__ == "__main__":
 
     for type in pet_types:
         loader = load_loader(f"data/dataloaders/{type}_loader.pkl")
-        vectordb = VectorStore(
-            collection_name=f"{type}_store",
-            embedding_function=OpenAIEmbeddings(),
-            client_settings=Settings(persist_directory="data/db", is_persistent=True),
-            loader=loader,
-        )
 
-        vectordb.add_docs()
+        vectordb = load_vectorstore(f"{type}_store", loader)
+
+        # vectordb.add_docs()
 
         print(vectordb._collection.count())
