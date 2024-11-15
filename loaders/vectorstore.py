@@ -46,14 +46,17 @@ def load_vectorstore(collection_name, loader):
 if __name__ == "__main__":
     load_dotenv()
 
-    loader = load_loader("data/dataloaders/cat_loader.pkl")
-    vectordb = VectorStore(
-        collection_name="cat_store",
-        embedding_function=OpenAIEmbeddings(),
-        client_settings=Settings(persist_directory="data/db", is_persistent=True),
-        loader=loader,
-    )
+    pet_types = ["dog", "cat"]
 
-    vectordb.add_docs()
+    for type in pet_types:
+        loader = load_loader(f"data/dataloaders/{type}_loader.pkl")
+        vectordb = VectorStore(
+            collection_name=f"{type}_store",
+            embedding_function=OpenAIEmbeddings(),
+            client_settings=Settings(persist_directory="data/db", is_persistent=True),
+            loader=loader,
+        )
 
-    print(vectordb._collection.count())
+        vectordb.add_docs()
+
+        print(vectordb._collection.count())

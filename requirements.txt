@@ -8,3 +8,5 @@ black
 chromadb
 pypdf
 fastapi
+torch
+transformers
