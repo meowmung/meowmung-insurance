@@ -67,7 +67,7 @@ if __name__ == "__main__":
     vectordb = load_vectorstore(collection_name=f"{pet_type}_store", loader=loader)
 
     chatbot = RecommendBot(
-        model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
+        model_name="gpt-4o-mini", streaming=False, temperature=0, vectorstore=vectordb
     )
 
     response = chatbot.recommend(
