@@ -1,10 +1,9 @@
 from dotenv import load_dotenv
-from langchain import PromptTemplate, LLMChain
-from langchain.chains import RetrievalQA
 from langchain_openai import ChatOpenAI
+from langchain.retrievers.multi_query import MultiQueryRetriever
 from loaders.vectorstore import *
-from loaders.dataloader import extract_company_name
 import json
+import re
 import glob
 
 
@@ -13,73 +12,33 @@ class SummaryBot:
         self.llm = ChatOpenAI(
             model_name=model_name, streaming=streaming, temperature=temperature
         )
-
-        self.template = PromptTemplate(
-            input_variables=[
-                "company",
-                "insurance",
-                "special_terms",
-                "context",
-                "query",
-            ],
-            template=""" 
-            당신은 보험 상품 설명서를 요약하는 챗봇입니다.
-            사용자가 제공하는 설명서의 내용을 요약하여 다음의 세 가지 정보를 JSON 형태로 제공합니다:
-            1. 보험 회사 이름(company): {company}
-            2. 보험 상품 명(insurance): {insurance}
-            3. 세부 특수약관(특약)들(special terms): 보험 상품에 존재하는 모든 세부 특수약관(특약)들에 대한 정보를 검색하고, 각 약관에 대한 정보를 JSON 형태로 제공하세요.
-            세부 특수 약관의 이름들의 목록은 다음과 같습니다: {special_terms}
-            괄호 안에 주어진 정보는 key 의 이름입니다.
-            문서 내 명시된 모든 특약 이름과 정보들을 찾으세요.
-            검색해야 할 정보는:
-                * 특수약관의 이름 (name)
-                * 보험금 지급사유 (causes)
-                * 보험금 지급 세부사항 (details)
-                * 보상 금액 한도 (limit)
-
-            제공된 문서 내의 검색 결과에만 기반하여 응답하세요. 절대로 임의의 정보를 생성하지 마세요.
-            특약 이름에 대한 응답 생성 시서로 다른 문장 내의 단어들을 조합하지 마세요.
-
-            {context}
-
-            질문: {query}
-            답변:
-            """,
-        )
         self.vectorstore = vectorstore
-        self.retriever = self.vectorstore.as_retriever()
-        self.qa_chain = LLMChain(prompt=self.template, llm=self.llm)
+        self.retriever = MultiQueryRetriever.from_llm(
+            retriever=self.vectorstore.as_retriever(), llm=self.llm
+        )
 
-    def summarize(
-        self,
-        question="주어진 context 내에 존재하는 모든 특약들에 대한 정보를 검색해주세요",
-    ):
-        result = self.retriever.get_relevant_documents(question)
-        company = result[0].metadata["company"]
-        insurance = get_insurance(company)
-
+    def summarize(self, company):
         special_terms = self.vectorstore.loader.special_terms
-        print(special_terms)
-        print("+++++++++++++++++++++++")
+        special_terms_name_list = [term["name"] for term in special_terms]
+        insurance_info = {"company": company, "insurance": get_insurance(company)}
+        special_terms_info = []
 
-        context = "\n".join(
-            [
-                doc.page_content
-                for doc in result
-                if any(term["name"] in doc.page_content for term in special_terms)
-            ]
-        )
+        for term_name in special_terms_name_list:
+            question = f"{term_name}에 대한 정보를 context에서 찾아 반환하세요."
+            term_result = self.retriever.get_relevant_documents(question)
 
-        response = self.qa_chain.invoke(
-            {
-                "company": company,
-                "insurance": insurance,
-                "context": context,
-                "special_terms": special_terms,
-                "query": question,
+            details = "\n".join(clean_text(doc.page_content) for doc in term_result)
+
+            info = {
+                "name": term_name,
+                "details": details,
             }
-        )
-        return response
+
+            special_terms_info.append(info)
+
+        insurance_info["special_terms"] = special_terms_info
+
+        return insurance_info
 
 
 def get_insurance(company):
@@ -95,8 +54,25 @@ def get_insurance(company):
         "samsung_dog": "무배당 삼성화재 다이렉트 반려견보험",
         "samsung_cat": "무배당 삼성화재 다이렉트 반려묘보험",
     }
+    return insurance_items.get(company)
 
-    return insurance_items[company]
+
+def clean_json(text):
+    cleaned_text = text.replace("\n", "").replace("    ", "").strip()
+
+    try:
+        return json.loads(cleaned_text)
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON: {e}")
+        return {}
+
+
+def clean_text(text):
+    filtered_text = re.sub(r"[^가-힣0-9().]", " ", text)
+    filtered_text = re.sub(r"\(\s*\)", "", filtered_text)
+    cleaned_text = re.sub(r"\s+", " ", filtered_text).strip()
+
+    return cleaned_text
 
 
 def save_summaries(company):
@@ -105,14 +81,15 @@ def save_summaries(company):
     vectordb = load_vectorstore(f"{company}_store", loader)
 
     bot = SummaryBot(
-        model_name="gpt-4-turbo", streaming=False, temperature=0, vectorstore=vectordb
+        model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
     )
 
-    summary = bot.summarize()
+    summary = bot.summarize(company)
 
-    output_filename = f"data/json/summaries/{company}_output.json"
+    pet_type = company.split("_")[1]
+    output_filename = f"summaries/{pet_type}/{company}_output.json"
     with open(output_filename, "w", encoding="utf-8") as f:
-        json.dump(summary["text"], f, ensure_ascii=False, indent=4)
+        json.dump(summary, f, ensure_ascii=False, indent=4)
 
 
 if __name__ == "__main__":
@@ -124,19 +101,19 @@ if __name__ == "__main__":
         save_summaries(company)
 
     # ----- debug by file ------
-    # company_name = "DB_cat"
-    # loader_path = f"data/dataloaders/{company_name}_loader.pkl"
+    # company = "DB_dog"
+    # loader_path = f"data/dataloaders/{company}_loader.pkl"
     # loader = load_loader(loader_path)
-    # vectordb = load_vectorstore("DB_cat_store", loader)
+    # vectordb = load_vectorstore("DB_dog_store", loader)
 
     # bot = SummaryBot(
-    #     model_name="gpt-4-turbo", streaming=False, temperature=0, vectorstore=vectordb
+    #     model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
     # )
 
-    # summary = bot.summarize()
-    # print(summary["text"])
+    # summary = bot.summarize(company)
+    # print(summary)
 
     # ----- debug saving -----
-    # output_filename = f"data/json/summaries/{company_name}_output.json"
+    # output_filename = f"data/json/summaries/{company}_output.json"
     # with open(output_filename, "w", encoding="utf-8") as f:
-    #     json.dump(summary, f, ensure_ascii=False, indent=4)
+    #     json.dump(clean_json(summary["text"]), f, ensure_ascii=False, indent=4)

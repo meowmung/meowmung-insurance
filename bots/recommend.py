@@ -1,111 +1,82 @@
 from dotenv import load_dotenv
-from langchain import PromptTemplate
-from langchain.chains import RetrievalQA
 from langchain_openai import ChatOpenAI
 from loaders.vectorstore import *
-from langchain_community.vectorstores import Chroma
 
 
 class RecommendBot:
-
     def __init__(self, model_name, streaming, temperature, vectorstore):
         self.llm = ChatOpenAI(
             model_name=model_name, streaming=streaming, temperature=temperature
         )
-        self.template = """당신은 반려견과 반려묘를 위한 보험 상품을 추천하는 챗봇입니다.
-        사용자는 다음과 같은 특징을 입력할 것입니다:
-        1. 반려동물 종류
-        2. 품종
-        3. 나이
-        4. 성별
-        5. 중성화 여부
-        6. 걱정되는 질병
-
-        입력된 특징을 사용하여 제공된 컨텍스트에서 가장 적합한 보험 상품과 특약을 찾으세요.
-        제공되는 반려동물의 조건과 가장 유사한 특약을 가지는 서로 다른 회사의 보험 상품 3개를 추천해야 합니다.
-        추천하는 특약의 갯수는 제한이 없습니다.
-        특약 이름은 임의로 생성하지 않고, 주어진 문서에서 검색하여 사용자에게 있는 그대로 제공하세요.
-        문서에서 제공되지 않는 단어는 출력되는 JSON 데이터 포함되어서는 안됩니다.
-
-        다음 JSON 형식으로 응답하세요:
-            "insurance": 출처 문서 파일 이름에 나와 있는 보험사 이름,
-            "special_contracts": [입력된 특징과 가장 잘 맞는 특약 리스트]
-
-        최종 답변에는 총 3개의 JSON 데이터가 포함됩니다.
-
-        {context}
-
-        질문: {question}
-        답변:
-        """
-
         self.vectorstore = vectorstore
-        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 3})
+        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 2})
 
-    def ask(
-        self, pet_type, breed, age, gender, neutered, concerned_illnesses, question
+    def recommend(
+        self,
+        pet_type,
+        breed,
+        age,
+        gender,
+        neutered,
+        concerned_illnesses,
     ):
 
-        prompt = PromptTemplate(
-            input_variables=[
-                "context",
-                "question",
-                "pet_type",
-                "breed",
-                "age",
-                "gender",
-                "neutered",
-                "concerned_illnesses",
-            ],
-            template=self.template,
-        )
+        illnesses_text = ", ".join(concerned_illnesses)
 
-        qa_chain = RetrievalQA.from_chain_type(
-            llm=self.llm,
-            chain_type_kwargs={"prompt": prompt},
-            retriever=self.retriever,
-            return_source_documents=True,
-        )
+        question = f"{illnesses_text} 을 보장하는 특약들을 포함하는 서로 다른 보험 2개를 추천해주세요. 각 보험에 해당하는 특약들도 함께 추천해주세요."
 
-        response = qa_chain.invoke(
-            {
-                "context": "",
-                "query": question,
-                "pet_type": pet_type,
-                "breed": breed,
-                "age": age,
-                "gender": gender,
-                "neutered": neutered,
-                "concerned_illnesses": concerned_illnesses,
-            }
-        )
+        result = self.retriever.get_relevant_documents(question)
+        context = "\n".join([doc.page_content for doc in result])
 
-        print("Retrieved documents:", response.get("source_documents"))
+        prompt = f"""
+        사용자가 입력한 정보는 다음과 같습니다:
+        - 동물 종류: {pet_type}, 품종: {breed}, 나이: {age}, 성별: {gender}, 중성화 여부: {neutered}
+        - 걱정되는 질병: {illnesses_text}
 
-        return response["result"]
+        주어진 정보를 바탕으로 적합한 보험 상품 2개를 추천해주세요.
+        보험 상품의 특약 중 details 에 걱정되는 질병에 대한 내용을 포함하는 것을 모두 검색하세요.
+        특약의 갯수에는 제한이 없습니다. 단, 관련 없는 특약은 가져와서는 안됩니다.
+        적합한 보험 상품은 위에 명시된 질병을 모두 보장할 수 있는 것입니다.
+        각 보험 상품의 특약 정보는 special_contracts 배열에 추가하세요.
+        걱정되는 질병에 관한 내용을 포함하는 특약들을 모두 포함하여 아래 형식으로 출력하세요:
+        {{
+            "insurance": "보험상품 이름",
+            "special_contracts": [
+            {{
+                "name": 특약 이름,
+                "causes": 보험금 지급 사유,
+                "limits": 보장 한도,
+                "details": 특약 요약
+            }}
+            ]
+        }}
+
+        답변을 '''json 등의 래퍼로 감싸지 마세요
+        {context}
+        """
+
+        response = self.llm(prompt)
+        return response
 
 
 if __name__ == "__main__":
     load_dotenv()
 
-    vectordb = Chroma(
-        collection_name="pet-insurance",
-        persist_directory="data/db",
-        embedding_function=OpenAIEmbeddings(),
-    )
+    pet_type = "dog"
+    loader = load_loader(f"data/dataloaders/{pet_type}_loader.pkl")
+    vectordb = load_vectorstore(collection_name=f"{pet_type}_store", loader=loader)
 
     chatbot = RecommendBot(
-        model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
+        model_name="gpt-4o-mini", streaming=False, temperature=0, vectorstore=vectordb
     )
 
-    response = chatbot.ask(
-        pet_type="dog",
+    response = chatbot.recommend(
+        pet_type=pet_type,
         breed="닥스훈트",
         age="4",
         gender="F",
         neutered="yes",
-        concerned_illnesses="슬개골, 치과 치료",
-        question="제 강아지를 위한 보험 상품과 세부 특약들을 추천해주세요.",
+        concerned_illnesses=["백내장", "슬개골"],
     )
 
-    print(response)
+    print(response.content)
