@@ -81,7 +81,7 @@ def save_summaries(company):
     vectordb = load_vectorstore(f"{company}_store", loader)
 
     bot = SummaryBot(
-        model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
+        model_name="gpt-4o-mini", streaming=False, temperature=0, vectorstore=vectordb
     )
 
     summary = bot.summarize(company)
