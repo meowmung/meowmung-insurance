@@ -65,7 +65,7 @@ if __name__ == "__main__":
     )
 
     response = chatbot.recommend(
-        concerned_illnesses=["피부", "치과"],
+        concerned_illnesses=["백내장"],
     )
 
     print(response.content)

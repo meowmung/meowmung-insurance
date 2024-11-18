@@ -65,15 +65,6 @@ if __name__ == "__main__":
 
     pet_types = ["dog", "cat"]
 
-    # for type in pet_types:
-    #     loader = load_loader(f"data/dataloaders/{type}_loader.pkl")
-
-    #     vectordb = load_vectorstore(f"{type}_store", loader)
-
-    #     # vectordb.add_docs()
-
-    #     print(vectordb._collection.count())
-
     for type in pet_types:
         loader = load_loader(f"data/dataloaders/{type}_loader.pkl")
 
@@ -84,6 +75,8 @@ if __name__ == "__main__":
             client_settings=Settings(persist_directory="data/db", is_persistent=True),
             loader=loader,
         )
+
+        # vectordb = load_vectorstore(f"{type}_store", loader)
 
         vectordb.add_docs()
 
