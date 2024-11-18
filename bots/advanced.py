@@ -94,7 +94,7 @@ if __name__ == "__main__":
         neuterized=True,
         weight=10,
         food_count=2,
-        additional_text="이 보험 상품의 가입 조건을 알고 싶어요.",
+        additional_text="이 보험 상품을 추천한 이유도 알고 싶어요",
     )
 
     print(response)
