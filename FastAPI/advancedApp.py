@@ -28,7 +28,7 @@ class RecommendationResponse(BaseModel):
 load_dotenv()
 
 
-@app.post("/recommend", response_model=RecommendationResponse)
+@app.post("/insurance/advanced", response_model=RecommendationResponse)
 async def recommend(request: InfoRequest):
     try:
         pet_type = request.pet_type

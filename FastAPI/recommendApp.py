@@ -22,7 +22,7 @@ class RecommendationResponse(BaseModel):
 load_dotenv()
 
 
-@app.post("/recommend", response_model=RecommendationResponse)
+@app.post("/insurance/recommend", response_model=RecommendationResponse)
 async def recommend(request: InfoRequest):
     try:
         concerned = request.concerned
