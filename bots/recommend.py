@@ -12,10 +12,7 @@ class RecommendBot:
         self.vectorstore = vectorstore
         self.retriever = self.vectorstore.as_retriever()
 
-    def recommend(
-        self,
-        concerned_illnesses,
-    ):
+    def get_context(self, concerned_illnesses, top):
         retrieved_documents = []
         illness_synonyms = {
             "백내장": ["백내장", "녹내장", "안과", "시력"],
@@ -38,14 +35,14 @@ class RecommendBot:
         insurance_counts = Counter(
             [doc.metadata["insurance"] for doc in retrieved_documents]
         )
-        top_2_insurances = [
-            insurance for insurance, _ in insurance_counts.most_common(2)
+        top_insurances = [
+            insurance for insurance, _ in insurance_counts.most_common(top)
         ]
 
         top_documents = [
             doc
             for doc in retrieved_documents
-            if doc.metadata["insurance"] in top_2_insurances
+            if doc.metadata["insurance"] in top_insurances
         ]
 
         context = "\n".join(
@@ -57,8 +54,11 @@ class RecommendBot:
                 for doc in top_documents
             ]
         )
-        print(context[:300])
 
+        return context
+
+    def recommend(self, concerned_illnesses):
+        context = self.get_context(concerned_illnesses, 2)
         prompt = f"""
         context 에 두 개의 보험 상품 정보를 아래의 형식으로 출력하세요.
         보험 상품과 특약의 이름은 metadata 를 참고하세요.
