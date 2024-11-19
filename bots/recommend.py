@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from loaders.vectorstore import *
 from collections import Counter
+from bots.summary import clean_json
 
 
 class RecommendBot:
@@ -79,7 +80,10 @@ class RecommendBot:
         """
 
         response = self.llm(prompt)
-        return response
+        response_json = clean_json(response.content)
+        print(type(response_json))
+
+        return response_json
 
 
 if __name__ == "__main__":
@@ -95,4 +99,4 @@ if __name__ == "__main__":
 
     response = chatbot.recommend(concerned_illnesses=["백내장", "슬관절"])
 
-    print(response.content)
+    print(response)

@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 from bots.recommend import RecommendBot
+from bots.summary import clean_json
 from loaders.vectorstore import *
 import pickle
 import pandas as pd
@@ -66,7 +67,10 @@ class AdvancedBot(RecommendBot):
         """
 
         response = self.llm(prompt)
-        return response
+        response_json = clean_json(response.content)
+        print(type(response_json))
+
+        return response_json
 
 
 if __name__ == "__main__":
@@ -90,4 +94,4 @@ if __name__ == "__main__":
         concerned=["슬관절"],
     )
 
-    print(response.content)
+    print(response)

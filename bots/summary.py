@@ -68,6 +68,7 @@ def clean_json(text):
     cleaned_text = text.replace("\n", "").replace("    ", "").strip()
 
     try:
+        cleaned_text = f"[{cleaned_text.replace('}{', '},{')}]"
         return json.loads(cleaned_text)
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON: {e}")
