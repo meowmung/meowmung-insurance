@@ -24,8 +24,7 @@ class SummaryBot:
         special_terms_info = []
 
         for term_name in special_terms_name_list:
-            question = f"{term_name}에 대한 정보를 context에서 찾아 반환하세요."
-            term_result = self.retriever.get_relevant_documents(question)
+            term_result = self.retrieve_term_info(term_name)
 
             details = "\n".join(clean_text(doc.page_content) for doc in term_result)
 
@@ -39,6 +38,14 @@ class SummaryBot:
         insurance_info["special_terms"] = special_terms_info
 
         return insurance_info
+
+    def retrieve_term_info(self, term_name):
+        term_result = []
+        for doc in self.vectorstore.loader.docs:
+            if doc.metadata.get("term") == term_name:
+                term_result.append(doc)
+
+        return term_result
 
 
 def get_insurance(company):
@@ -101,13 +108,13 @@ if __name__ == "__main__":
         save_summaries(company)
 
     # ----- debug by file ------
-    # company = "DB_dog"
+    # company = "KB_dog"
     # loader_path = f"data/dataloaders/{company}_loader.pkl"
     # loader = load_loader(loader_path)
     # vectordb = load_vectorstore("DB_dog_store", loader)
 
     # bot = SummaryBot(
-    #     model_name="gpt-4o", streaming=False, temperature=0, vectorstore=vectordb
+    #     model_name="gpt-4o-mini", streaming=False, temperature=0, vectorstore=vectordb
     # )
 
     # summary = bot.summarize(company)

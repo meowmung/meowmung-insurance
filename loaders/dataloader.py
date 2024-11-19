@@ -1,6 +1,5 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from glob import glob
 import pickle
 from pathlib import Path
 import re
@@ -13,9 +12,6 @@ class Document:
         self.page_content = page_content
         self.metadata = metadata or {}
         self.id = doc_id
-
-    def add_metadata(self, key, value):
-        self.metadata[key] = value
 
 
 class Loader:
@@ -60,11 +56,22 @@ class Loader:
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size, chunk_overlap=overlap
         )
+
+        newest_term = "None"
+
         for doc_index, doc in enumerate(doc_list):
             doc.metadata["company"] = company_name
+            doc.metadata["term"] = "None"
+
             chunks = text_splitter.split_text(doc.page_content)
             for chunk_index, chunk in enumerate(chunks):
                 doc_id = f"{company_name}_{doc_index}_{chunk_index}"
+
+                found_term = find_term(chunk)
+                if len(found_term) > 0:
+                    newest_term = found_term[0]
+
+                doc.metadata["term"] = newest_term
                 docs.append(
                     Document(page_content=chunk, metadata=doc.metadata, doc_id=doc_id)
                 )
@@ -99,23 +106,34 @@ def extract_company_name(file_path):
     return company_name
 
 
+def find_term(chunk):
+    pattern = r"특약 이름\s?\[([^\]]+)\]"
+    match = re.findall(pattern, chunk)
+
+    return match
+
+
 if __name__ == "__main__":
-    pet_types = ["dog", "cat"]
+    # pet_types = ["dog", "cat"]
 
     # for type in pet_types:
     #     loader = Loader(dir_path=f"summaries/{type}", has_special_terms=False)
-    #     print("Doc content:\n")
-    #     print(len(loader.docs[3].page_content))
-    #     print(
-    #         f"+++++++++++++++++++++++++++++++{type}+++++++++++++++++++++++++++++++++++"
-    #     )
-    #     print("Doc metadata:\n")
-    #     print(loader.docs[3].metadata)
-    #     print(loader.docs[3].id)
-    #     print(
-    #         f"+++++++++++++++++++++++++++++++{type}+++++++++++++++++++++++++++++++++++"
-    #     )
+    #     loader.save_loader(f"data/dataloaders/{type}_loader.pkl")
+    #     print("loader saved")
 
-    for type in pet_types:
-        loader = Loader(dir_path=f"summaries/{type}", has_special_terms=False)
-        loader.save_loader(f"data/dataloaders/{type}_loader.pkl")
+    # ____debug pdf load______
+    # pet_type = "dog"
+    # loader = load_loader(f"data/dataloaders/KB_dog_loader.pkl")
+
+    # i = 26
+    # print(loader.docs[i].page_content)
+    # print(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    # print(loader.docs[i].metadata)
+    # print(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+    # ___debug json load___
+    loader = load_loader("data/dataloaders/dog_loader.pkl")
+    i = 4
+    print(loader.docs[i].page_content)
+    print(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    print(loader.docs[i].metadata)

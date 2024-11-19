@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from loaders.vectorstore import *
+from collections import Counter
 
 
 class RecommendBot:
@@ -9,28 +10,58 @@ class RecommendBot:
             model_name=model_name, streaming=streaming, temperature=temperature
         )
         self.vectorstore = vectorstore
-        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 10})
+        self.retriever = self.vectorstore.as_retriever()
 
-    def recommend(
-        self,
-        concerned_illnesses,
-    ):
+    def get_context(self, concerned_illnesses, top):
+        retrieved_documents = []
+        illness_synonyms = {
+            "백내장": ["백내장", "녹내장", "안과", "시력"],
+            "슬관절": ["슬관절", "슬개골", "컴퓨터"],
+            "피부": ["피부", "약물"],
+            "치과": ["치과", "구강", "컴퓨터"],
+        }
 
-        illnesses_text = ", ".join(concerned_illnesses)
+        for illness in concerned_illnesses:
+            question = f"{', '.join(illness_synonyms[illness])}을 포함하는 문서를 검색하세요. '{illness}' 라는 단어는 반드시 포함되어야 합니다."
+            result = self.retriever.get_relevant_documents(question)
 
-        question = f"{illnesses_text} 을 보장하는 특약들을 포함하는 서로 다른 보험 2개를 추천해주세요. {illnesses_text} 에 대한 내용이 있는 특약들만 함께 추천해주세요. 특약의 상세 내용에 {illnesses_text} 이 포함되어야 합니다."
+            filtered_result = []
+            for i in range(len(result)):
+                if illness in result[i].page_content:
+                    filtered_result.append(result[i])
 
-        result = self.retriever.get_relevant_documents(question)
-        context = "\n".join([doc.page_content for doc in result])
+            retrieved_documents.extend(filtered_result)
 
+        insurance_counts = Counter(
+            [doc.metadata["insurance"] for doc in retrieved_documents]
+        )
+        top_insurances = [
+            insurance for insurance, _ in insurance_counts.most_common(top)
+        ]
+
+        top_documents = [
+            doc
+            for doc in retrieved_documents
+            if doc.metadata["insurance"] in top_insurances
+        ]
+
+        context = "\n".join(
+            [
+                f"보험사: {doc.metadata.get('company', '정보 없음')}\n"
+                f"보험 상품: {doc.metadata.get('insurance', '정보 없음')}\n"
+                f"특약: {doc.metadata.get('term', '정보 없음')}\n"
+                f"{doc.page_content}"
+                for doc in top_documents
+            ]
+        )
+
+        return context
+
+    def recommend(self, concerned_illnesses):
+        context = self.get_context(concerned_illnesses, 2)
         prompt = f"""
-        사용자가 입력한 정보는 다음과 같습니다:
-        - 걱정되는 질병: {illnesses_text}
-
-        걱정되는 질병에 대한 내용을 포함하는 특약을 모두 찾고, 찾은 특약 중 가장 많이 등장한 보험상품 2개를 추천하세요.
-        적합한 보험 상품은 위에 명시된 질병을 모두 보장할 수 있는 것입니다.
-        각 보험 상품의 특약 정보는 special_contracts 배열에 추가하세요.
-        걱정되는 질병에 관한 내용을 포함하는 특약들을 모두 포함하여 아래 형식으로 출력하세요:
+        context 에 두 개의 보험 상품 정보를 아래의 형식으로 출력하세요.
+        보험 상품과 특약의 이름은 metadata 를 참고하세요.
         {{
             "insurance": "보험상품 이름",
             "special_contracts": [
@@ -43,8 +74,6 @@ class RecommendBot:
             ]
         }}
         최종 답변에는 insurance 는 무조건 2개여야 합니다. 각 insurance 의 special_contracts 배열의 길이는 제한이 없습니다.
-        단, 명시된 질병에 대한 설명이 없는 특약은 절대로 가져와서는 안됩니다.
-        답변 시 이전의 정보를 참고하지 마세요.
         답변을 '''json 등의 래퍼로 감싸지 마세요
         {context}
         """
@@ -64,8 +93,6 @@ if __name__ == "__main__":
         model_name="gpt-4o-mini", streaming=False, temperature=0, vectorstore=vectordb
     )
 
-    response = chatbot.recommend(
-        concerned_illnesses=["피부", "치과"],
-    )
+    response = chatbot.recommend(concerned_illnesses=["백내장", "슬관절"])
 
     print(response.content)
