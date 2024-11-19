@@ -114,11 +114,12 @@ def find_term(chunk):
 
 
 if __name__ == "__main__":
-    pet_types = ["dog", "cat"]
+    # pet_types = ["dog", "cat"]
 
-    for type in pet_types:
-        loader = Loader(dir_path=f"summaries/{type}", has_special_terms=False)
-        loader.save_loader(f"data/dataloaders/{type}_loader.pkl")
+    # for type in pet_types:
+    #     loader = Loader(dir_path=f"summaries/{type}", has_special_terms=False)
+    #     loader.save_loader(f"data/dataloaders/{type}_loader.pkl")
+    #     print("loader saved")
 
     # ____debug pdf load______
     # pet_type = "dog"
@@ -129,3 +130,10 @@ if __name__ == "__main__":
     # print(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     # print(loader.docs[i].metadata)
     # print(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+    # ___debug json load___
+    loader = load_loader("data/dataloaders/dog_loader.pkl")
+    i = 4
+    print(loader.docs[i].page_content)
+    print(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    print(loader.docs[i].metadata)
