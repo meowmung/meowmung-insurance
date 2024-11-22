@@ -49,7 +49,9 @@ class SummaryBot:
         response = self.llm(prompt)
 
         try:
+            # JSON으로 응답 파싱
             details_json = json.loads(response.content)
+            # 'details' 키가 있는 경우 반환, 없으면 기본값 제공
             return details_json.get(
                 "details",
                 {
@@ -59,6 +61,7 @@ class SummaryBot:
                 },
             )
         except json.JSONDecodeError:
+            # JSON 파싱 실패 시 기본값 반환
             return {
                 "causes": "보험금 지급 사유 없음",
                 "limits": "보장 금액 한도 없음",
@@ -79,9 +82,9 @@ class SummaryBot:
         response = self.llm(prompt)
         try:
             illness_json = json.loads(response.content)
-            return illness_json.get("illness", ["기타"])
+            return illness_json.get("illness", "기타")
         except json.JSONDecodeError:
-            return ["기타"]
+            return "기타"
 
 
 def get_insurance(company):
@@ -136,52 +139,15 @@ def save_summaries(company, form):
         json.dump(summary, f, ensure_ascii=False, indent=4)
 
 
-def generate_illness_query(file_path, table_name):
-    with open(file_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
-    insurance = data.get("insurance")
-    term_list = data.get("special_terms")
-
-    query_list = []
-    for term in term_list:
-        name = term.get("name")
-        illness_list = term.get("illness")
-        for illness in illness_list:
-            query_list.append(
-                f'INSERT INTO {table_name} VALUE("{insurance}", "{name}", "{illness}")'
-            )
-
-    return query_list
-
-
-def generate_term_query(file_path, table_name):
-    with open(file_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
-    term_list = data.get("special_terms")
-
-    query_list = []
-    for term in term_list:
-        name = term.get("name")
-        summary = term.get("summary")
-        causes = summary.get("causes")
-        limits = summary.get("limits")
-        details = summary.get("details")
-        query_list.append(
-            f'INSERT INTO {table_name} VALUE("{name}", "{causes}", "{limits}", "{details}")'
-        )
-
-    return query_list
-
-
 if __name__ == "__main__":
     load_dotenv()
 
-    # file_paths = glob.glob(f"data/pdf/*.pdf")
+    file_paths = glob.glob(f"data/pdf/*.pdf")
 
-    # for path in file_paths:
-    #     company = extract_company_name(path)
-    #     save_summaries(company, "summary")
-    #     print(f"summary for {path} saved")
+    for path in file_paths:
+        company = extract_company_name(path)
+        save_summaries(company, "summary")
+        print(f"summary for {path} saved")
 
     # ---------debug by file------------
     # company = "DB_dog"
@@ -195,13 +161,3 @@ if __name__ == "__main__":
 
     # summary = bot.summarize(company)
     # print(summary)
-
-    # ----------debug query--------
-    pet_type = "dog"
-    company = "KB_dog"
-    file_path = f"summaries/{pet_type}/{company}_summary.json"
-
-    query_list = generate_term_query(file_path, "TableName")
-
-    for query in query_list:
-        print(query)

@@ -25,8 +25,7 @@ def pred_ill(age, gender, breed, weight, food_count, neutered):
         ]
     )
     predicted = model.predict(X)[0]
-    # return int(predicted)
-    return "백내장"
+    return int(predicted)
 
 
 def get_illness(concerned, age, gender, breed, weight, food_count, neutered):
