@@ -7,14 +7,14 @@ import glob
 
 
 class SummaryBot:
-    def __init__(self, model_name, streaming, temperature, vectorstore):
+    def __init__(self, model_name, streaming, temperature, loader):
         self.llm = ChatOpenAI(
             model_name=model_name, streaming=streaming, temperature=temperature
         )
-        self.vectorstore = vectorstore
+        self.loader = loader
 
     def summarize(self, company):
-        special_terms = self.vectorstore.loader.special_terms
+        special_terms = self.loader.special_terms
         special_terms_name_list = [term["name"] for term in special_terms]
         insurance_info = {"company": company, "insurance": get_insurance(company)}
         special_terms_info = []
@@ -122,10 +122,9 @@ def clean_text(text):
 def save_summaries(company, form):
     loader_path = f"data/dataloaders/{company}_loader.pkl"
     loader = load_loader(loader_path)
-    vectordb = load_vectorstore(f"{company}_store", loader)
 
     bot = SummaryBot(
-        model_name="gpt-4o-mini", streaming=False, temperature=0, vectorstore=vectordb
+        model_name="gpt-4o-mini", streaming=False, temperature=0, loader=loader
     )
 
     summary = bot.summarize(company)
@@ -134,43 +133,6 @@ def save_summaries(company, form):
     output_filename = f"summaries/{pet_type}/{company}_{form}.json"
     with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=4)
-
-
-def generate_illness_query(file_path, table_name):
-    with open(file_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
-    insurance = data.get("insurance")
-    term_list = data.get("special_terms")
-
-    query_list = []
-    for term in term_list:
-        name = term.get("name")
-        illness_list = term.get("illness")
-        for illness in illness_list:
-            query_list.append(
-                f'INSERT INTO {table_name} VALUE("{insurance}", "{name}", "{illness}")'
-            )
-
-    return query_list
-
-
-def generate_term_query(file_path, table_name):
-    with open(file_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
-    term_list = data.get("special_terms")
-
-    query_list = []
-    for term in term_list:
-        name = term.get("name")
-        summary = term.get("summary")
-        causes = summary.get("causes")
-        limits = summary.get("limits")
-        details = summary.get("details")
-        query_list.append(
-            f'INSERT INTO {table_name} VALUE("{name}", "{causes}", "{limits}", "{details}")'
-        )
-
-    return query_list
 
 
 if __name__ == "__main__":
@@ -184,24 +146,23 @@ if __name__ == "__main__":
     #     print(f"summary for {path} saved")
 
     # ---------debug by file------------
-    # company = "DB_dog"
-    # loader_path = f"data/dataloaders/{company}_loader.pkl"
-    # loader = load_loader(loader_path)
-    # vectordb = load_vectorstore(f"{company}_store", loader)
+    company = "DB_dog"
+    loader_path = f"data/dataloaders/{company}_loader.pkl"
+    loader = load_loader(loader_path)
 
-    # bot = SummaryBot(
-    #     model_name="gpt-4o-mini", streaming=False, temperature=0.3, vectorstore=vectordb
-    # )
+    bot = SummaryBot(
+        model_name="gpt-4o-mini", streaming=False, temperature=0.3, loader=loader
+    )
 
-    # summary = bot.summarize(company)
-    # print(summary)
+    summary = bot.summarize(company)
+    print(summary)
 
     # ----------debug query--------
-    pet_type = "dog"
-    company = "KB_dog"
-    file_path = f"summaries/{pet_type}/{company}_summary.json"
+    # pet_type = "dog"
+    # company = "KB_dog"
+    # file_path = f"summaries/{pet_type}/{company}_summary.json"
 
-    query_list = generate_term_query(file_path, "TableName")
+    # query_list = generate_term_query(file_path, "TableName")
 
-    for query in query_list:
-        print(query)
+    # for query in query_list:
+    #     print(query)

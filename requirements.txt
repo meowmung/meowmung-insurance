@@ -13,3 +13,4 @@ prometheus-fastapi-instrumentator
 pydantic
 uvicorn
 mlflow
+mysql-connector-python
