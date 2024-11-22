@@ -13,7 +13,7 @@ MODEL_NAME = "ill_pred_rfclf"
 MODEL_STAGE = "Production"
 
 
-def load_model():
+def load_model(pet_type):
     file_path = "models/ill_pred_rfclf.pkl"
 
     with open(file_path, "rb") as f:
@@ -31,9 +31,9 @@ def load_model():
     #     raise
 
 
-def pred_ill(age, gender, breed, weight, food_count, neutered):
+def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
 
-    model = load_model()
+    model = load_model(pet_type)
 
     X = pd.DataFrame(
         [
@@ -68,6 +68,7 @@ class RecommendationResponse(BaseModel):
 @app.post("/insurance/advanced", response_model=RecommendationResponse)
 async def return_illness(request: InfoRequest):
     try:
+        pet_type = request.pet_type
         age = request.age
         gender = request.gender
         breed = request.breed
@@ -76,6 +77,7 @@ async def return_illness(request: InfoRequest):
         neutered = request.neutered
 
         illness = pred_ill(
+            pet_type=pet_type,
             age=age,
             gender=gender,
             breed=breed,
