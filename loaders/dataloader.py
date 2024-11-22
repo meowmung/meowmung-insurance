@@ -134,6 +134,6 @@ if __name__ == "__main__":
     # ___debug json load___
     loader = load_loader("data/dataloaders/dog_loader.pkl")
     i = 4
-    print(loader.docs[i].page_content)
+    print(len(loader.docs[i].page_content))
     print(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     print(loader.docs[i].metadata)
