@@ -23,7 +23,9 @@ def load_model(pet_type):
 
     # try:
     #     # 모델 로드 (해당 모델이 등록된 이름과 단계에 따라 호출)
-    #     model = mlflow.pyfunc.load_model(model_uri=f"models:/{MODEL_NAME}/{MODEL_STAGE}")
+    #     model = mlflow.pyfunc.load_model(
+    #         model_uri=f"models:/{MODEL_NAME}/{MODEL_STAGE}"
+    #     )
     #     print(f"Model {MODEL_NAME} loaded successfully.")
     #     return model
     # except Exception as e:

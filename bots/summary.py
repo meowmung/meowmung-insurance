@@ -130,7 +130,7 @@ def save_summaries(company, form):
     summary = bot.summarize(company)
 
     pet_type = company.split("_")[1]
-    output_filename = f"summaries/{pet_type}/{company}_{form}.json"
+    output_filename = f"summaries/{company}_{form}.json"
     with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=4)
 
