@@ -7,10 +7,10 @@ langchain_openai
 pypdf
 fastapi
 scikit-learn
-prometheus-fastapi-instrumentator
 pydantic
 uvicorn
 mlflow
+prometheus-fastapi-instrumentator
 mysql-connector-python
 apache-airflow
 apache-airflow-providers-mysql
