@@ -85,7 +85,7 @@ class SummaryBot:
 
 
 def get_insurance(company):
-    filepath = "data/config/insurance_items.yaml"
+    filepath = "config/insurance_items.yaml"
     with open(filepath, "r", encoding="utf-8") as file:
         insurance_items = yaml.safe_load(file)
     return insurance_items.get(company)

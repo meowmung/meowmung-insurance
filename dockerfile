@@ -11,3 +11,5 @@ COPY . /meowmung-insurance
 EXPOSE 80
 
 CMD ["uvicorn", "FastAPI.advancedApp:app", "--host", "0.0.0.0", "--port", "80"]
+
+# docker run --env-file .env <IMAGE_NAME>
