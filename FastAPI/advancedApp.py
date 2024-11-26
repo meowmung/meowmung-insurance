@@ -62,10 +62,9 @@ def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
             return 3
 
     if pet_type == "cat":
-        if predicted_code == 2:
-            return 6
-        else:
-            return predicted_code + 4
+        if predicted_code == 0:
+            return 0
+        return predicted_code + 3
 
 
 class InfoRequest(BaseModel):
