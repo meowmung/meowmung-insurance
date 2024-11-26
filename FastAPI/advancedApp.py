@@ -9,7 +9,6 @@ import mlflow
 app = FastAPI()
 
 MLFLOW_TRACKING_URI = "http://<mlflow-server-url>:5000"
-MODEL_NAME = "ill_pred_rfclf"
 MODEL_STAGE = "Production"
 
 
@@ -23,6 +22,7 @@ def load_model(pet_type):
 
     # try:
     #     # 모델 로드 (해당 모델이 등록된 이름과 단계에 따라 호출)
+    #     MODEL_NAME = f"best_clf_{pet_type}"
     #     model = mlflow.pyfunc.load_model(
     #         model_uri=f"models:/{MODEL_NAME}/{MODEL_STAGE}"
     #     )
@@ -50,7 +50,22 @@ def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
         ]
     )
     predicted = model.predict(X)[0]
-    return int(predicted)
+
+    predicted_code = int(predicted)
+
+    if pet_type == "dog":
+        if predicted_code in [0, 1, 2]:
+            return predicted_code
+        elif predicted_code == 3:
+            return 6
+        elif predicted_code == 4:
+            return 3
+
+    if pet_type == "cat":
+        if predicted_code == 2:
+            return 6
+        else:
+            return predicted_code + 4
 
 
 class InfoRequest(BaseModel):
@@ -58,8 +73,8 @@ class InfoRequest(BaseModel):
     age: int
     gender: int
     breed: int
-    weight: int
-    food_count: int
+    weight: float
+    food_count: float
     neutered: int
 
 
