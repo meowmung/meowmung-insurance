@@ -1,9 +1,9 @@
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from loaders.vectorstore import *
+from loaders.dataloader import *
 import json
 import re
-import glob
+import yaml
 
 
 class SummaryBot:
@@ -85,18 +85,9 @@ class SummaryBot:
 
 
 def get_insurance(company):
-    insurance_items = {
-        "DB_cat": "무배당 다이렉트 펫블리 반려묘보험",
-        "DB_dog": "무배당 다이렉트 펫블리 반려견보험",
-        "hyundai_dog": "무배당 현대해상다이렉트굿앤굿 우리펫보험",
-        "hyundai_cat": "무배당 현대해상다이렉트굿앤굿 우리펫보험",
-        "KB_dog": "KB 다이렉트 금쪽같은 펫보험 (강아지) (무배당)",
-        "KB_cat": "KB 다이렉트 금쪽같은 펫보험 (고양이) (무배당)",
-        "meritz_dog": "(무)펫퍼민트 Puppy&Family 보험 다이렉트",
-        "meritz_cat": "(무)펫퍼민트 Cat&Family 보험 다이렉트",
-        "samsung_dog": "무배당 삼성화재 다이렉트 반려견보험",
-        "samsung_cat": "무배당 삼성화재 다이렉트 반려묘보험",
-    }
+    filepath = "data/config/insurance_items.yaml"
+    with open(filepath, "r", encoding="utf-8") as file:
+        insurance_items = yaml.safe_load(file)
     return insurance_items.get(company)
 
 
@@ -120,6 +111,8 @@ def clean_text(text):
 
 
 def save_summaries(company, form):
+    load_dotenv()
+
     loader_path = f"data/dataloaders/{company}_loader.pkl"
     loader = load_loader(loader_path)
 
@@ -129,40 +122,37 @@ def save_summaries(company, form):
 
     summary = bot.summarize(company)
 
-    pet_type = company.split("_")[1]
-    output_filename = f"summaries/{company}_{form}.json"
+    output_filename = f"summaries/summary_test/{company}_{form}.json"
     with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=4)
 
 
-if __name__ == "__main__":
-    load_dotenv()
+# if __name__ == "__main__":
+#     file_paths = glob.glob(f"data/pdf/*.pdf")
 
-    # file_paths = glob.glob(f"data/pdf/*.pdf")
+#     for path in file_paths:
+#         company = extract_company_name(path)
+#         save_summaries(company, "summary")
+#         print(f"summary for {path} saved")
 
-    # for path in file_paths:
-    #     company = extract_company_name(path)
-    #     save_summaries(company, "summary")
-    #     print(f"summary for {path} saved")
+# ---------debug by file------------
+# company = "DB_dog"
+# loader_path = f"data/dataloaders/{company}_loader.pkl"
+# loader = load_loader(loader_path)
 
-    # ---------debug by file------------
-    company = "DB_dog"
-    loader_path = f"data/dataloaders/{company}_loader.pkl"
-    loader = load_loader(loader_path)
+# bot = SummaryBot(
+#     model_name="gpt-4o-mini", streaming=False, temperature=0.3, loader=loader
+# )
 
-    bot = SummaryBot(
-        model_name="gpt-4o-mini", streaming=False, temperature=0.3, loader=loader
-    )
+# summary = bot.summarize(company)
+# print(summary)
 
-    summary = bot.summarize(company)
-    print(summary)
+# ----------debug query--------
+# pet_type = "dog"
+# company = "KB_dog"
+# file_path = f"summaries/{pet_type}/{company}_summary.json"
 
-    # ----------debug query--------
-    # pet_type = "dog"
-    # company = "KB_dog"
-    # file_path = f"summaries/{pet_type}/{company}_summary.json"
+# query_list = generate_term_query(file_path, "TableName")
 
-    # query_list = generate_term_query(file_path, "TableName")
-
-    # for query in query_list:
-    #     print(query)
+# for query in query_list:
+#     print(query)

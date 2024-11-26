@@ -17,3 +17,4 @@ mysql-connector-python
 apache-airflow
 apache-airflow-providers-mysql
 mysqlclient
+pyyaml
