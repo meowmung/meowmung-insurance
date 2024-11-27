@@ -4,6 +4,9 @@ import pickle
 import pandas as pd
 import uvicorn
 import mlflow
+import os
+import pymysql
+from dotenv import load_dotenv
 
 
 app = FastAPI()
@@ -67,6 +70,50 @@ def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
         return predicted_code + 3
 
 
+def insert_info(
+    pet_type,
+    age,
+    gender,
+    breed,
+    weight,
+    food_count,
+    neutered,
+    current_disease,
+):
+    load_dotenv()
+
+    try:
+        conn = pymysql.connect(
+            host="localhost",
+            port=3306,
+            user="root",
+            password=os.getenv("MYSQL_KEY"),
+            database="meowmung",
+        )
+        cursor = conn.cursor()
+
+        query = f"""INSERT INTO TrainData_{pet_type} 
+                    (age, weight, food_count, breed_code, gender, neutered, disease_code)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+
+        cursor.execute(
+            query, (age, weight, food_count, breed, gender, neutered, current_disease)
+        )
+        conn.commit()
+        print("Data inserted successfully!")
+
+    except pymysql.MySQLError as e:
+        print("MySQL error occurred:", e)
+
+    except Exception as e:
+        print("An error occurred:", e)
+
+    finally:
+        if conn:
+            conn.close()
+            print("Connection closed.")
+
+
 class InfoRequest(BaseModel):
     pet_type: str
     age: int
@@ -75,6 +122,7 @@ class InfoRequest(BaseModel):
     weight: float
     food_count: float
     neutered: int
+    current_disease: int
 
 
 class RecommendationResponse(BaseModel):
@@ -91,6 +139,18 @@ async def return_illness(request: InfoRequest):
         weight = request.weight
         food_count = request.food_count
         neutered = request.neutered
+        current_illness = request.current_disease
+
+        insert_info(
+            pet_type=pet_type,
+            age=age,
+            gender=gender,
+            breed=breed,
+            weight=weight,
+            food_count=food_count,
+            neutered=neutered,
+            current_disease=current_illness,
+        )
 
         illness = pred_ill(
             pet_type=pet_type,

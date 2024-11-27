@@ -11,8 +11,5 @@ pydantic
 uvicorn
 mlflow
 prometheus-fastapi-instrumentator
-mysql-connector-python
-apache-airflow
-apache-airflow-providers-mysql
-mysqlclient
 pyyaml
+pymysql
