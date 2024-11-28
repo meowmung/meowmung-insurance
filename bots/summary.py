@@ -44,7 +44,7 @@ class SummaryBot:
                 "details": "특약 요약"
             }}
         }}
-        정보가 부족한 경우라도 지정된 형식에 따라 적절한 정보를 생성하세요.
+        정보가 부족하다면, 지정된 형식과 특약 이름을 참고해 적절한 정보를 생성해 답하세요.
         """
         response = self.llm(prompt)
 
@@ -60,9 +60,9 @@ class SummaryBot:
             )
         except json.JSONDecodeError:
             return {
-                "causes": "보험금 지급 사유 없음",
-                "limits": "보장 금액 한도 없음",
-                "details": "특약 요약 없음",
+                "causes": "기타 질병에 대해 폭 넓게 보장",
+                "limits": "보험회사 홈페이지 참고",
+                "details": "보험회사 홈페이지 참고",
             }
 
     def infer_illness(self, term_name, details):
@@ -79,13 +79,13 @@ class SummaryBot:
         illness 배열이 비어있다면, ["기타"] 로 응답하세요.
         """
         response = self.llm(prompt)
-        # try:
-        #     illness_json = json.loads(response.content)
-        #     return illness_json.get("illness", ["기타"])
-        # except json.JSONDecodeError:
-        #     return ["기타"]
-        illness_json = json.loads(response.content)
-        return illness_json.get("illness")
+        try:
+            illness_json = json.loads(response.content)
+            return illness_json.get("illness", ["기타"])
+        except json.JSONDecodeError:
+            return ["기타"]
+        # illness_json = json.loads(response.content)
+        # return illness_json.get("illness")
 
 
 def get_insurance(company):
@@ -116,7 +116,6 @@ def clean_text(text):
 
 def save_summaries(company, form):
     load_dotenv()
-
     loader_path = f"data/dataloaders/{company}_loader.pkl"
     loader = load_loader(loader_path)
 
@@ -141,7 +140,7 @@ def save_summaries(company, form):
 
 # ---------debug by file------------
 load_dotenv()
-company = "DB_dog"
+company = "DB_cat"
 loader_path = f"data/dataloaders/{company}_loader.pkl"
 loader = load_loader(loader_path)
 

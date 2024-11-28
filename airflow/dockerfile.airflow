@@ -1,7 +1,19 @@
-FROM apache/airflow
+FROM apache/airflow:2.10.3-python3.9
 
+COPY airflow/requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+ENV AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=mysql+mysqlconnector://docker:1234@172.30.1.50:3306/meowmung
+ENV AIRFLOW_HOME=/opt/airflow
+
+WORKDIR $AIRFLOW_HOME
+
+COPY airflow/entrypoint.sh /entrypoint.sh
 USER root
+RUN chmod +x /entrypoint.sh
 
-RUN apt-get update && apt-get install -y default-mysql-client
+COPY airflow/dags/ $AIRFLOW_HOME/dags/
 
-USER airflow
+EXPOSE 8080
+
+ENTRYPOINT ["/entrypoint.sh"]

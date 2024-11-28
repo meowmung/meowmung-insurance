@@ -1,14 +1,8 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime
-import sys
-import os
 import glob
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-from bots.summary import *
-
-PDF_DIR_PATH = "data/pdf"
 
 default_args = {
     "owner": "lsjdg",
@@ -17,7 +11,13 @@ default_args = {
 
 
 def summarize_dir():
-    file_paths = glob.glob(f"{PDF_DIR_PATH}/*.pdf")
+    import sys
+    import os
+
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+    from bots.summary import save_summaries, extract_company_name
+
+    file_paths = glob.glob(f"data/pdf/*.pdf")
 
     for path in file_paths:
         company = extract_company_name(path)

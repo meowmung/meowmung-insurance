@@ -1,12 +1,13 @@
+import sys
+import os
+from datetime import datetime
 from airflow import DAG
 from airflow.providers.mysql.operators.mysql import MySqlOperator
 from airflow.operators.python import PythonOperator
-from datetime import datetime
-import sys
-import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-from bots.query import *
+
+from bots.query import insert_insurances, insert_terms, insert_results
 
 
 default_args = {
