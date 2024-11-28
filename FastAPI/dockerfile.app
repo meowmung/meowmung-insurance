@@ -1,12 +1,12 @@
 FROM python:3.9
 
-COPY FastAPI/requirements.txt requirements.txt 
+COPY FastAPI/requirements.txt requirements.txt
 
 RUN pip install -r requirements.txt
 
-WORKDIR /meowmung-docker
+WORKDIR /advanced
 
-COPY . /meowmung-docker
+COPY . /advanced
 
 EXPOSE 80
 

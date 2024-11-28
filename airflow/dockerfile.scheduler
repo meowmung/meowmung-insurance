@@ -1,0 +1,10 @@
+FROM apache/airflow
+
+COPY airflow/scheduler/requirements.txt /requirements.txt
+
+RUN pip install -r /requirements.txt
+
+WORKDIR /scheduler
+
+CMD ["bash", "-c", "if ! airflow db check-migrations; then airflow db init; fi && airflow scheduler"]
+

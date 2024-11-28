@@ -87,7 +87,7 @@ def insert_info(
             host="localhost",
             port=3306,
             user="root",
-            password=os.getenv("MYSQL_KEY"),
+            password=os.getenv("MYSQL_ROOT_PASSWORD"),
             database="meowmung",
         )
         cursor = conn.cursor()

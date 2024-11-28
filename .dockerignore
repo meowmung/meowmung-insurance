@@ -5,6 +5,7 @@ __pycache__/
 # Ignore virtual environments
 venv/
 .env/
+.env
 
 # Ignore build artifacts
 build/
@@ -28,4 +29,3 @@ docker-compose.override.yml
 tests/
 data/
 loaders/vectorstore.py
-airflow/

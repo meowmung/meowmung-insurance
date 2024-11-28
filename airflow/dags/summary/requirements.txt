@@ -1,8 +1,0 @@
-mlflow
-mysql-connector-python
-apache-airflow
-apache-airflow-providers-mysql
-mysqlclient
-pandas
-scikit-learn
-python-dotenv

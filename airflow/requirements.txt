@@ -1,0 +1,3 @@
+apache-airflow-providers-mysql
+python-dotenv
+mysql-connector-python

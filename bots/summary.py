@@ -70,18 +70,22 @@ class SummaryBot:
         아래 특약 이름과 설명에 따라 관련된 질병을 유추하세요:
         특약 이름: {term_name}
         특약 설명: {details}
-        가능한 질병 카테고리: [백내장, 슬관절, 치과, 상해, 사망, MRI, 약물, 재활, 피부]
+        가능한 질병 카테고리: [백내장, 슬관절, 치과, 약물치료, 피부]
+        특약 설명에 MRI 가 있다면, 관련된 질병은 슬관절과 치과입니다.
         출력 형식:
         {{
             "illness": 관련된 질병 카테고리 (하나 또는 여러 개 가능)를 list 로 반환
         }}
+        illness 배열이 비어있다면, ["기타"] 로 응답하세요.
         """
         response = self.llm(prompt)
-        try:
-            illness_json = json.loads(response.content)
-            return illness_json.get("illness", ["기타"])
-        except json.JSONDecodeError:
-            return ["기타"]
+        # try:
+        #     illness_json = json.loads(response.content)
+        #     return illness_json.get("illness", ["기타"])
+        # except json.JSONDecodeError:
+        #     return ["기타"]
+        illness_json = json.loads(response.content)
+        return illness_json.get("illness")
 
 
 def get_insurance(company):
@@ -117,12 +121,12 @@ def save_summaries(company, form):
     loader = load_loader(loader_path)
 
     bot = SummaryBot(
-        model_name="gpt-4o-mini", streaming=False, temperature=0, loader=loader
+        model_name="gpt-4o-mini", streaming=False, temperature=0.3, loader=loader
     )
 
     summary = bot.summarize(company)
 
-    output_filename = f"summaries/summary_test/{company}_{form}.json"
+    output_filename = f"summaries/{company}_{form}.json"
     with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=4)
 
@@ -136,16 +140,17 @@ def save_summaries(company, form):
 #         print(f"summary for {path} saved")
 
 # ---------debug by file------------
-# company = "DB_dog"
-# loader_path = f"data/dataloaders/{company}_loader.pkl"
-# loader = load_loader(loader_path)
+load_dotenv()
+company = "DB_dog"
+loader_path = f"data/dataloaders/{company}_loader.pkl"
+loader = load_loader(loader_path)
 
-# bot = SummaryBot(
-#     model_name="gpt-4o-mini", streaming=False, temperature=0.3, loader=loader
-# )
+bot = SummaryBot(
+    model_name="gpt-4o-mini", streaming=False, temperature=0.3, loader=loader
+)
 
-# summary = bot.summarize(company)
-# print(summary)
+summary = bot.summarize(company)
+print(summary)
 
 # ----------debug query--------
 # pet_type = "dog"
