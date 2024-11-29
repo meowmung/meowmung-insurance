@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Initializing Airflow Database..."
-airflow db init
+airflow db migrate && airflow connections create-default-connections
 
 echo "Starting Airflow Scheduler..."
 airflow scheduler &
