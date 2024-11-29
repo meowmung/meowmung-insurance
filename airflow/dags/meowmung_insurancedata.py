@@ -25,7 +25,7 @@ with DAG(
 
     create_table = MySqlOperator(
         task_id="create_table",
-        mysql_conn_id="meowmung_userdata",
+        mysql_conn_id="meowmung_mysql",
         sql="""
             CREATE TABLE IF NOT EXISTS Insurance (
             insurance_id VARCHAR(25) PRIMARY KEY,

@@ -18,7 +18,7 @@ from sklearn.metrics import (
 
 
 def fetch_data_from_mysql(**kwargs):
-    mysql_hook = MySqlHook(mysql_conn_id="MEOWMUNG")
+    mysql_hook = MySqlHook(mysql_conn_id="meowmung_mysql")
     query = "SELECT * FROM traindata_dog;"
     df = mysql_hook.get_pandas_df(query)
 
@@ -62,11 +62,11 @@ def model_training_and_tuning(ti, **kwargs):
     recall = recall_score(y, y_pred, average="weighted")
     f1 = f1_score(y, y_pred, average="weighted")
 
-    model_path = "/home/ubuntu/airflow/dags/best_model/best_model.pkl"
-    with open(model_path, "wb") as f:
+    model_filename = "/tmp/best_model.pkl"
+    with open(model_filename, "wb") as f:
         pickle.dump(best_model, f)
 
-    ti.xcom_push(key="model_path", value=model_path)
+    ti.xcom_push(key="model_path", value=model_filename)
     ti.xcom_push(
         key="metrics",
         value={
@@ -80,16 +80,16 @@ def model_training_and_tuning(ti, **kwargs):
 
 
 def push_model_to_mlflow(ti, **kwargs):
-    model_path = ti.xcom_pull(task_ids="train_and_tune_model", key="model_path")
+    model_filename = ti.xcom_pull(task_ids="train_and_tune_model", key="model_path")
 
-    if model_path is None:
+    if model_filename is None:
         raise ValueError("No model path found in XCom")
 
-    with open(model_path, "rb") as f:
+    with open(model_filename, "rb") as f:
         best_model = pickle.load(f)
 
     mlflow.set_tracking_uri("http://localhost:5000")
-    mlflow.set_experiment("Dog Model Training")
+    mlflow.set_experiment("Model Training")
 
     with mlflow.start_run():
         mlflow.sklearn.log_model(best_model, "best_model")
@@ -114,10 +114,10 @@ default_args = {
 }
 
 with DAG(
-    "mlflow",
+    "meowmung_trainer",
     default_args=default_args,
-    schedule="@daily",
-    tags=["meowmung", "insurance_data", "dog_health"],
+    schedule="@monthly",
+    tags=["meowmung", "insurance_data", "pet_health"],
 ) as dag:
 
     fetch_data = PythonOperator(
