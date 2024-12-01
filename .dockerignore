@@ -27,5 +27,4 @@ docker-compose.override.yml
 
 # Ignore specific directories
 tests/
-data/
 loaders/vectorstore.py

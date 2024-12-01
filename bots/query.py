@@ -75,7 +75,7 @@ def insert_insurances(dir_path, table_name, **kwargs):
 
     for path in file_paths:
         queries = generate_insurance_query(path, table_name)
-        mysql_hook = MySqlHook(mysql_conn_id="meowmung_userdata")
+        mysql_hook = MySqlHook(mysql_conn_id="meowmung_mysql")
         for query in queries:
             mysql_hook.run(query)
 
@@ -85,7 +85,7 @@ def insert_terms(dir_path, table_name, **kwargs):
 
     for path in file_paths:
         queries = generate_term_query(path, table_name)
-        mysql_hook = MySqlHook(mysql_conn_id="meowmung_userdata")
+        mysql_hook = MySqlHook(mysql_conn_id="meowmung_mysql")
         for query in queries:
             mysql_hook.run(query)
 
@@ -95,7 +95,7 @@ def insert_results(dir_path, table_name, **kwargs):
 
     for path in file_paths:
         queries = generate_results_query(path, table_name)
-        mysql_hook = MySqlHook(mysql_conn_id="meowmung_userdata")
+        mysql_hook = MySqlHook(mysql_conn_id="meowmung_mysql")
         for query in queries:
             mysql_hook.run(query)
 

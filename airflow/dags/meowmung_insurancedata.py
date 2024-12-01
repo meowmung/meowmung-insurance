@@ -48,6 +48,7 @@ with DAG(
             result_id BIGINT PRIMARY KEY AUTO_INCREMENT,
             term_id VARCHAR(25),
             disease_name VARCHAR(25),
+            UNIQUE (term_id, disease_name),
             INDEX idx_term_id (term_id),
             FOREIGN KEY (term_id) REFERENCES Terms(term_id)
             );

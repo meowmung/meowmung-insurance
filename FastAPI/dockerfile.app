@@ -10,5 +10,5 @@ COPY . /advanced
 
 EXPOSE 80
 
-CMD ["uvicorn", "FastAPI.advancedApp:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "FastAPI.recommendApp:app", "--host", "0.0.0.0", "--port", "80"]
 

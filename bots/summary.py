@@ -116,7 +116,7 @@ def clean_text(text):
 
 def save_summaries(company, form):
     load_dotenv()
-    loader_path = f"data/dataloaders/{company}_loader.pkl"
+    loader_path = f"../data/dataloaders/{company}_loader.pkl"
     loader = load_loader(loader_path)
 
     bot = SummaryBot(
@@ -125,7 +125,7 @@ def save_summaries(company, form):
 
     summary = bot.summarize(company)
 
-    output_filename = f"summaries/{company}_{form}.json"
+    output_filename = f"../summaries/{company}_{form}.json"
     with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=4)
 
@@ -138,25 +138,25 @@ def save_summaries(company, form):
 #         save_summaries(company, "summary")
 #         print(f"summary for {path} saved")
 
-# ---------debug by file------------
-load_dotenv()
-company = "DB_cat"
-loader_path = f"data/dataloaders/{company}_loader.pkl"
-loader = load_loader(loader_path)
+#     ---------debug by file------------
+#     load_dotenv()
+#     company = "DB_cat"
+#     loader_path = f"data/dataloaders/{company}_loader.pkl"
+#     loader = load_loader(loader_path)
 
-bot = SummaryBot(
-    model_name="gpt-4o-mini", streaming=False, temperature=0.3, loader=loader
-)
+#     bot = SummaryBot(
+#         model_name="gpt-4o-mini", streaming=False, temperature=0.3, loader=loader
+#     )
 
-summary = bot.summarize(company)
-print(summary)
+#     summary = bot.summarize(company)
+#     print(summary)
 
-# ----------debug query--------
-# pet_type = "dog"
-# company = "KB_dog"
-# file_path = f"summaries/{pet_type}/{company}_summary.json"
+#     ----------debug query--------
+#     pet_type = "dog"
+#     company = "KB_dog"
+#     file_path = f"summaries/{pet_type}/{company}_summary.json"
 
-# query_list = generate_term_query(file_path, "TableName")
+#     query_list = generate_term_query(file_path, "TableName")
 
-# for query in query_list:
-#     print(query)
+#     for query in query_list:
+#         print(query)
