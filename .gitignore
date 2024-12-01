@@ -130,8 +130,8 @@ ENV/
 env.bak/
 venv.bak/
 data/*
-data/json/*
-!data/json/summaries/
+!data/pdf/
+!data/pdf/**
 
 
 # Spyder project settings
