@@ -7,10 +7,10 @@ from chromadb import Client
 
 
 class VectorStore(Chroma):
-    def __init__(self, collection_name, embedding_function, client_settings, loader):
+    def __init__(self, collection_name, client_settings, loader):
         super().__init__(
             collection_name=collection_name,
-            embedding_function=embedding_function,
+            embedding_function=OpenAIEmbeddings(model="text-embedding-ada-002"),
             client_settings=client_settings,
         )
         self.loader = loader
@@ -26,17 +26,24 @@ class VectorStore(Chroma):
         returns: vectordb w/ new data added
         """
         doc_text = [doc.page_content for doc in self.loader.docs]
-        embedding_function = OpenAIEmbeddings()
+        embedding_function = OpenAIEmbeddings(model="text-embedding-ada-002")
         embeddings = embedding_function.embed_documents(doc_text)
 
         self.add_documents(documents=self.loader.docs, embeddings=embeddings)
 
 
+def delete_collection(collection_name):
+    client_settings = Settings(persist_directory="data/db", is_persistent=True)
+    client = Client(client_settings)
+
+    try:
+        client.delete_collection(collection_name)
+        print(f"컬렉션 '{collection_name}'이 성공적으로 삭제되었습니다.")
+    except ValueError:
+        print(f"컬렉션 '{collection_name}'이 존재하지 않습니다.")
+
+
 def load_vectorstore(collection_name, loader):
-    """
-    Collection을 로드하고 벡터 저장소를 반환합니다.
-    이미 저장된 데이터를 불러오는 과정이므로 임베딩을 새로 계산하지 않습니다.
-    """
     client_settings = Settings(persist_directory="data/db", is_persistent=True)
 
     client = Client(client_settings)
@@ -44,7 +51,6 @@ def load_vectorstore(collection_name, loader):
 
     vectorstore = VectorStore(
         collection_name=collection_name,
-        embedding_function=None,
         client_settings=client_settings,
         loader=loader,
     )
@@ -52,6 +58,19 @@ def load_vectorstore(collection_name, loader):
     vectorstore._collection = collection
 
     return vectorstore
+
+
+def store_by_insurance(file_path):
+    insurance_name = extract_company_name(file_path)
+    loader = load_loader(f"data/dataloaders/{insurance_name}_loader.pkl")
+    delete_collection(f"{insurance_name}_store")
+    vectordb = VectorStore(
+        collection_name=f"{insurance_name}_store",
+        client_settings=Settings(persist_directory="data/db", is_persistent=True),
+        loader=loader,
+    )
+    vectordb.add_docs()
+    print(f"store - {file_path}")
 
 
 if __name__ == "__main__":
@@ -62,8 +81,16 @@ if __name__ == "__main__":
     for type in pet_types:
         loader = load_loader(f"data/dataloaders/{type}_loader.pkl")
 
-        vectordb = load_vectorstore(f"{type}_store", loader)
+        delete_collection(f"{type}_store")
 
-        # vectordb.add_docs()
+        vectordb = VectorStore(
+            collection_name=f"{type}_store",
+            client_settings=Settings(persist_directory="data/db", is_persistent=True),
+            loader=loader,
+        )
+
+        # vectordb = load_vectorstore(f"{type}_store", loader)
+
+        vectordb.add_docs()
 
         print(vectordb._collection.count())

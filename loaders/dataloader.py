@@ -1,6 +1,5 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from glob import glob
 import pickle
 from pathlib import Path
 import re
@@ -14,9 +13,6 @@ class Document:
         self.metadata = metadata or {}
         self.id = doc_id
 
-    def add_metadata(self, key, value):
-        self.metadata[key] = value
-
 
 class Loader:
     def __init__(self, dir_path=None, file_path=None, has_special_terms=True):
@@ -29,21 +25,6 @@ class Loader:
         if has_special_terms:
             self.special_terms = extract_special_terms(self)
 
-    def load_dir(self, dir_path):
-        docs = []
-        for filename in os.listdir(dir_path):
-            if filename.endswith(".json"):
-                file_path = os.path.join(dir_path, filename)
-                with open(file_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    doc = Document(
-                        page_content=json.dumps(data, ensure_ascii=False),
-                        metadata={"source": filename},
-                        doc_id=filename,
-                    )
-                    docs.append(doc)
-        return docs
-
     def load_dir_with_metadata(self, dir_path):
         docs = []
         for filename in os.listdir(dir_path):
@@ -51,17 +32,19 @@ class Loader:
                 file_path = os.path.join(dir_path, filename)
                 with open(file_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    doc = Document(
-                        page_content=json.dumps(
-                            data["special_terms"], ensure_ascii=False
-                        ),
-                        metadata={
-                            "company": data["company"],
-                            "insurance": data["insurance"],
-                        },
-                        doc_id=filename,
-                    )
-                    docs.append(doc)
+                    for chunk_idx, term in enumerate(data["special_terms"]):
+                        doc = Document(
+                            page_content=json.dumps(
+                                term["details"], ensure_ascii=False
+                            ),
+                            metadata={
+                                "company": data["company"],
+                                "insurance": data["insurance"],
+                                "term": term["name"],
+                            },
+                            doc_id=f"{filename}_chunk{chunk_idx}",
+                        )
+                        docs.append(doc)
         return docs
 
     def load_file(self, file_path, chunk_size=500, overlap=50):
@@ -73,11 +56,22 @@ class Loader:
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size, chunk_overlap=overlap
         )
+
+        newest_term = "None"
+
         for doc_index, doc in enumerate(doc_list):
             doc.metadata["company"] = company_name
+            doc.metadata["term"] = "None"
+
             chunks = text_splitter.split_text(doc.page_content)
             for chunk_index, chunk in enumerate(chunks):
                 doc_id = f"{company_name}_{doc_index}_{chunk_index}"
+
+                found_term = find_term(chunk)
+                if len(found_term) > 0:
+                    newest_term = found_term[0]
+
+                doc.metadata["term"] = newest_term
                 docs.append(
                     Document(page_content=chunk, metadata=doc.metadata, doc_id=doc_id)
                 )
@@ -112,21 +106,41 @@ def extract_company_name(file_path):
     return company_name
 
 
+def find_term(chunk):
+    pattern = r"특약 이름\s?\[([^\]]+)\]"
+    match = re.findall(pattern, chunk)
+
+    return match
+
+
+def load_by_insurance(file_path):
+    insurance_name = extract_company_name(file_path)
+    loader = Loader(file_path=file_path)
+    loader.save_loader(f"data/dataloaders/{insurance_name}_loader.pkl")
+    print(f"loader - {file_path}")
+
+
 if __name__ == "__main__":
-    pet_types = ["dog", "cat"]
+    # pet_types = ["dog", "cat"]
 
-    for type in pet_types:
-        loader = Loader(dir_path=f"summaries/{type}", has_special_terms=False)
-        print(loader.docs[1].page_content)
+    # for type in pet_types:
+    #     loader = Loader(dir_path=f"summaries/{type}", has_special_terms=False)
+    #     loader.save_loader(f"data/dataloaders/{type}_loader.pkl")
+    #     print("loader saved")
 
-    # --------debug-----------
-    # loader.save_loader("data/dataloaders/dog_loader.pkl")
+    # ____debug pdf load______
+    # pet_type = "dog"
+    # loader = load_loader(f"data/dataloaders/KB_dog_loader.pkl")
 
-    # loader = load_loader("data/dataloaders/KB_dog_loader.pkl")
-    # for i in range(len(loader.docs)):
-    #     print(loader.docs[i].page_content)
-    # print(loader.docs[0].metadata)
+    # i = 26
+    # print(loader.docs[i].page_content)
+    # print(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    # print(loader.docs[i].metadata)
+    # print(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-    # --------debug add metadata-----------
-    # loader = Loader(dir_path="summaries/dog", has_special_terms=False)
-    # print(loader.docs[0].page_content)
+    # ___debug json load___
+    loader = load_loader("data/dataloaders/dog_loader.pkl")
+    i = 4
+    print(len(loader.docs[i].page_content))
+    print(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    print(loader.docs[i].metadata)
