@@ -129,9 +129,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-data/*
-!data/pdf/
-!data/pdf/**
+data/.DS_Store
 
 
 # Spyder project settings
