@@ -1,0 +1,30 @@
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+
+# Ignore virtual environments
+venv/
+.env/
+.env
+
+# Ignore build artifacts
+build/
+dist/
+*.egg-info
+
+# Ignore logs and temporary files
+*.log
+*.tmp
+*.swp
+*.bak
+
+# Ignore version control files
+.git/
+.gitignore
+
+# Ignore Docker-related files
+docker-compose.override.yml
+
+# Ignore specific directories
+tests/
+loaders/vectorstore.py

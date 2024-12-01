@@ -1,0 +1,54 @@
+services:
+  mysql:
+    image: mysql:latest
+    container_name: mysql_container
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: "host.docker.internal"
+      MYSQL_PORT: "3306"
+      MYSQL_USER: "root"
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: "meowmung"
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  airflow-scheduler:
+    image: apache/airflow
+    container_name: airflow-scheduler
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: mysql+mysqlconnector://$root:${MYSQL_ROOT_PASSWORD}@mysql:3306/meowmung
+    depends_on:
+      - mysql
+    volumes:
+      - ./dags:/opt/airflow/dags
+    ports:
+      - "8080:8080"
+
+  # airflow-webserver:
+  #   build:
+  #     context: .
+  #   image: airflow_image
+  #   container_name: airflow-webserver
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+  #     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: mysql+mysqlconnector://${MYSQL_USERNAME}:${MYSQL_PASSWORD}@mysql:3306/meowmung
+  #     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+  #   depends_on:
+  #     - mysql
+  #   ports:
+  #     - "8080:8080"
+  #   volumes:
+  #     - ./dags:/opt/airflow/dags
+
+
+
+volumes:
+  mysql_data:

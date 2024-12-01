@@ -113,6 +113,13 @@ def find_term(chunk):
     return match
 
 
+def load_by_insurance(file_path):
+    insurance_name = extract_company_name(file_path)
+    loader = Loader(file_path=file_path)
+    loader.save_loader(f"data/dataloaders/{insurance_name}_loader.pkl")
+    print(f"loader - {file_path}")
+
+
 if __name__ == "__main__":
     # pet_types = ["dog", "cat"]
 

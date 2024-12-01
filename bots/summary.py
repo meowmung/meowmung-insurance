@@ -1,20 +1,20 @@
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from loaders.vectorstore import *
+from loaders.dataloader import *
 import json
 import re
-import glob
+import yaml
 
 
 class SummaryBot:
-    def __init__(self, model_name, streaming, temperature, vectorstore):
+    def __init__(self, model_name, streaming, temperature, loader):
         self.llm = ChatOpenAI(
             model_name=model_name, streaming=streaming, temperature=temperature
         )
-        self.vectorstore = vectorstore
+        self.loader = loader
 
     def summarize(self, company):
-        special_terms = self.vectorstore.loader.special_terms
+        special_terms = self.loader.special_terms
         special_terms_name_list = [term["name"] for term in special_terms]
         insurance_info = {"company": company, "insurance": get_insurance(company)}
         special_terms_info = []
@@ -44,7 +44,7 @@ class SummaryBot:
                 "details": "특약 요약"
             }}
         }}
-        정보가 부족한 경우라도 지정된 형식에 따라 적절한 정보를 생성하세요.
+        정보가 부족하다면, 지정된 형식과 특약 이름을 참고해 적절한 정보를 생성해 답하세요.
         """
         response = self.llm(prompt)
 
@@ -60,9 +60,9 @@ class SummaryBot:
             )
         except json.JSONDecodeError:
             return {
-                "causes": "보험금 지급 사유 없음",
-                "limits": "보장 금액 한도 없음",
-                "details": "특약 요약 없음",
+                "causes": "기타 질병에 대해 폭 넓게 보장",
+                "limits": "보험회사 홈페이지 참고",
+                "details": "보험회사 홈페이지 참고",
             }
 
     def infer_illness(self, term_name, details):
@@ -70,11 +70,13 @@ class SummaryBot:
         아래 특약 이름과 설명에 따라 관련된 질병을 유추하세요:
         특약 이름: {term_name}
         특약 설명: {details}
-        가능한 질병 카테고리: [백내장, 슬관절, 치과, 상해, 사망, MRI, 약물, 재활, 피부]
+        가능한 질병 카테고리: [백내장, 슬관절, 치과, 약물치료, 피부]
+        특약 설명에 MRI 가 있다면, 관련된 질병은 슬관절과 치과입니다.
         출력 형식:
         {{
             "illness": 관련된 질병 카테고리 (하나 또는 여러 개 가능)를 list 로 반환
         }}
+        illness 배열이 비어있다면, ["기타"] 로 응답하세요.
         """
         response = self.llm(prompt)
         try:
@@ -82,21 +84,14 @@ class SummaryBot:
             return illness_json.get("illness", ["기타"])
         except json.JSONDecodeError:
             return ["기타"]
+        # illness_json = json.loads(response.content)
+        # return illness_json.get("illness")
 
 
 def get_insurance(company):
-    insurance_items = {
-        "DB_cat": "무배당 다이렉트 펫블리 반려묘보험",
-        "DB_dog": "무배당 다이렉트 펫블리 반려견보험",
-        "hyundai_dog": "무배당 현대해상다이렉트굿앤굿 우리펫보험",
-        "hyundai_cat": "무배당 현대해상다이렉트굿앤굿 우리펫보험",
-        "KB_dog": "KB 다이렉트 금쪽같은 펫보험 (강아지) (무배당)",
-        "KB_cat": "KB 다이렉트 금쪽같은 펫보험 (고양이) (무배당)",
-        "meritz_dog": "(무)펫퍼민트 Puppy&Family 보험 다이렉트",
-        "meritz_cat": "(무)펫퍼민트 Cat&Family 보험 다이렉트",
-        "samsung_dog": "무배당 삼성화재 다이렉트 반려견보험",
-        "samsung_cat": "무배당 삼성화재 다이렉트 반려묘보험",
-    }
+    filepath = "config/insurance_items.yaml"
+    with open(filepath, "r", encoding="utf-8") as file:
+        insurance_items = yaml.safe_load(file)
     return insurance_items.get(company)
 
 
@@ -120,88 +115,48 @@ def clean_text(text):
 
 
 def save_summaries(company, form):
-    loader_path = f"data/dataloaders/{company}_loader.pkl"
+    load_dotenv()
+    loader_path = f"../data/dataloaders/{company}_loader.pkl"
     loader = load_loader(loader_path)
-    vectordb = load_vectorstore(f"{company}_store", loader)
 
     bot = SummaryBot(
-        model_name="gpt-4o-mini", streaming=False, temperature=0, vectorstore=vectordb
+        model_name="gpt-4o-mini", streaming=False, temperature=0.3, loader=loader
     )
 
     summary = bot.summarize(company)
 
-    pet_type = company.split("_")[1]
-    output_filename = f"summaries/{pet_type}/{company}_{form}.json"
+    output_filename = f"../summaries/{company}_{form}.json"
     with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=4)
 
 
-def generate_illness_query(file_path, table_name):
-    with open(file_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
-    insurance = data.get("insurance")
-    term_list = data.get("special_terms")
+# if __name__ == "__main__":
+#     file_paths = glob.glob(f"data/pdf/*.pdf")
 
-    query_list = []
-    for term in term_list:
-        name = term.get("name")
-        illness_list = term.get("illness")
-        for illness in illness_list:
-            query_list.append(
-                f'INSERT INTO {table_name} VALUE("{insurance}", "{name}", "{illness}")'
-            )
+#     for path in file_paths:
+#         company = extract_company_name(path)
+#         save_summaries(company, "summary")
+#         print(f"summary for {path} saved")
 
-    return query_list
+#     ---------debug by file------------
+#     load_dotenv()
+#     company = "DB_cat"
+#     loader_path = f"data/dataloaders/{company}_loader.pkl"
+#     loader = load_loader(loader_path)
 
+#     bot = SummaryBot(
+#         model_name="gpt-4o-mini", streaming=False, temperature=0.3, loader=loader
+#     )
 
-def generate_term_query(file_path, table_name):
-    with open(file_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
-    term_list = data.get("special_terms")
+#     summary = bot.summarize(company)
+#     print(summary)
 
-    query_list = []
-    for term in term_list:
-        name = term.get("name")
-        summary = term.get("summary")
-        causes = summary.get("causes")
-        limits = summary.get("limits")
-        details = summary.get("details")
-        query_list.append(
-            f'INSERT INTO {table_name} VALUE("{name}", "{causes}", "{limits}", "{details}")'
-        )
+#     ----------debug query--------
+#     pet_type = "dog"
+#     company = "KB_dog"
+#     file_path = f"summaries/{pet_type}/{company}_summary.json"
 
-    return query_list
+#     query_list = generate_term_query(file_path, "TableName")
 
-
-if __name__ == "__main__":
-    load_dotenv()
-
-    # file_paths = glob.glob(f"data/pdf/*.pdf")
-
-    # for path in file_paths:
-    #     company = extract_company_name(path)
-    #     save_summaries(company, "summary")
-    #     print(f"summary for {path} saved")
-
-    # ---------debug by file------------
-    # company = "DB_dog"
-    # loader_path = f"data/dataloaders/{company}_loader.pkl"
-    # loader = load_loader(loader_path)
-    # vectordb = load_vectorstore(f"{company}_store", loader)
-
-    # bot = SummaryBot(
-    #     model_name="gpt-4o-mini", streaming=False, temperature=0.3, vectorstore=vectordb
-    # )
-
-    # summary = bot.summarize(company)
-    # print(summary)
-
-    # ----------debug query--------
-    pet_type = "dog"
-    company = "KB_dog"
-    file_path = f"summaries/{pet_type}/{company}_summary.json"
-
-    query_list = generate_term_query(file_path, "TableName")
-
-    for query in query_list:
-        print(query)
+#     for query in query_list:
+#         print(query)

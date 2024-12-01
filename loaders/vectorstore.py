@@ -60,6 +60,19 @@ def load_vectorstore(collection_name, loader):
     return vectorstore
 
 
+def store_by_insurance(file_path):
+    insurance_name = extract_company_name(file_path)
+    loader = load_loader(f"data/dataloaders/{insurance_name}_loader.pkl")
+    delete_collection(f"{insurance_name}_store")
+    vectordb = VectorStore(
+        collection_name=f"{insurance_name}_store",
+        client_settings=Settings(persist_directory="data/db", is_persistent=True),
+        loader=loader,
+    )
+    vectordb.add_docs()
+    print(f"store - {file_path}")
+
+
 if __name__ == "__main__":
     load_dotenv()
 
