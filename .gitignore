@@ -129,9 +129,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-data/*
-!data/pdf/
-!data/pdf/**
 
 
 # Spyder project settings
