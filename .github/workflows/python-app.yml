@@ -1,0 +1,31 @@
+name: Docker Build & Push Action
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dockerfile: [dockerfile.mysql, airflow/dockerfile.airflow, FastAPI/dockerfile.app]
+        repo: [database, airflow, recommendation]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+      - name: Build and push Docker image
+        uses: mr-smithers-excellent/docker-build-push@v5
+        with:
+          dockerfile: ${{ matrix.dockerfile }}
+          image: jjdg148/meowmung-insurance-${{ matrix.repo }}
+          tags: latest
+          registry: docker.io
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
