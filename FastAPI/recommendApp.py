@@ -4,6 +4,7 @@ import pickle
 import pandas as pd
 import uvicorn
 import mlflow
+from mlflow.tracking import MlflowClient
 import os
 import pymysql
 from dotenv import load_dotenv
@@ -24,15 +25,44 @@ def load_model(pet_type):
     return model
 
     # try:
-    #     # 모델 로드 (해당 모델이 등록된 이름과 단계에 따라 호출)
     #     MODEL_NAME = f"best_clf_{pet_type}"
-    #     model = mlflow.pyfunc.load_model(
-    #         model_uri=f"models:/{MODEL_NAME}/{MODEL_STAGE}"
-    #     )
-    #     print(f"Model {MODEL_NAME} loaded successfully.")
+
+    #     model_versions = client.search_model_versions(f"name='{MODEL_NAME}'")
+
+    #     if not model_versions:
+    #         raise ValueError(f"No registered models found for {MODEL_NAME}")
+
+    #     production_models = [
+    #         mv for mv in model_versions if mv.current_stage == MODEL_STAGE
+    #     ]
+
+    #     if not production_models:
+    #         raise ValueError(f"No models in stage '{MODEL_STAGE}' for {MODEL_NAME}")
+
+    #     model_metrics = []
+    #     for model_version in production_models:
+    #         run_id = model_version.run_id
+    #         run_data = client.get_run(run_id).data
+    #         metric_value = run_data.metrics.get(metric_name)
+    #         if metric_value is not None:
+    #             model_metrics.append((model_version.version, metric_value))
+
+    #     if not model_metrics:
+    #         raise ValueError(f"No metrics found for models in stage '{MODEL_STAGE}'")
+
+    #     model_metrics.sort(key=lambda x: x[1], reverse=not ascending)
+    #     best_model_version = model_metrics[0][0]
+
+    #     print(f"Best model version: {best_model_version} with {metric_name}: {model_metrics[0][1]}")
+
+    #     model_uri = f"models:/{MODEL_NAME}/{best_model_version}"
+    #     model = mlflow.pyfunc.load_model(model_uri)
+
+    #     print(f"Model {MODEL_NAME} (version {best_model_version}) loaded successfully.")
     #     return model
+
     # except Exception as e:
-    #     print(f"Error loading model: {str(e)}")
+    #     print(f"Error loading best model: {str(e)}")
     #     raise
 
 

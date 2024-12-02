@@ -19,17 +19,17 @@ from sklearn.metrics import (
 
 def fetch_data_from_mysql(**kwargs):
     mysql_hook = MySqlHook(mysql_conn_id="meowmung_mysql")
-    query = "SELECT * FROM traindata_dog;"
+    query = "SELECT * FROM traindata_cat;"
     df = mysql_hook.get_pandas_df(query)
 
     if df.empty:
         raise ValueError("No data found in MySQL")
 
-    kwargs["ti"].xcom_push(key="traindata_dog_df", value=df.to_json())
+    kwargs["ti"].xcom_push(key="traindata_cat_df", value=df.to_json())
 
 
 def model_training_and_tuning(ti, **kwargs):
-    json_data = ti.xcom_pull(task_ids="fetch_data_from_mysql", key="traindata_dog_df")
+    json_data = ti.xcom_pull(task_ids="fetch_data_from_mysql", key="traindata_cat_df")
     if json_data is None:
         raise ValueError("No data found in XCom")
 
@@ -62,7 +62,7 @@ def model_training_and_tuning(ti, **kwargs):
     recall = recall_score(y, y_pred, average="weighted")
     f1 = f1_score(y, y_pred, average="weighted")
 
-    model_filename = "/tmp/best_model.pkl"
+    model_filename = "/tmp/best_model_cat.pkl"
     with open(model_filename, "wb") as f:
         pickle.dump(best_model, f)
 
@@ -89,10 +89,10 @@ def push_model_to_mlflow(ti, **kwargs):
         best_model = pickle.load(f)
 
     mlflow.set_tracking_uri("http://localhost:5000")
-    mlflow.set_experiment("Model Training")
+    mlflow.set_experiment("cat Model Training")
 
     with mlflow.start_run():
-        mlflow.sklearn.log_model(best_model, "best_model")
+        mlflow.sklearn.log_model(best_model, "best_model_cat")
 
         metrics = ti.xcom_pull(task_ids="train_and_tune_model", key="metrics")
         mlflow.log_metrics(
