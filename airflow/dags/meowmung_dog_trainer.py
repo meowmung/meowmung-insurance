@@ -117,7 +117,7 @@ default_args = {
 }
 
 with DAG(
-    "meowmung_trainer",
+    "meowmung_dog_trainer",
     default_args=default_args,
     schedule="@monthly",
     tags=["meowmung", "insurance_data", "pet_health"],
