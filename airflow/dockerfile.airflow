@@ -4,11 +4,11 @@ WORKDIR /opt
 
 COPY airflow/requirements.txt requirements.txt
 COPY airflow/airflow.db airflow.db
-# COPY bots/ bots/
-# COPY loaders/dataloader.py loaders/dataloader.py
-# COPY data/dataloaders data/dataloaders
-# COPY data/pdf data/pdf
-# COPY summaries/ summaries/
+COPY bots/ bots/
+COPY loaders/dataloader.py loaders/dataloader.py
+COPY data/dataloaders data/dataloaders
+COPY data/pdf data/pdf
+COPY summaries/ summaries/
 
 RUN pip install --no-cache-dir -r requirements.txt
 

@@ -1,6 +1,9 @@
 import sys
 import os
 from datetime import datetime
+import pymysql
+
+pymysql.install_as_MySQLdb()
 from airflow import DAG
 from airflow.providers.mysql.operators.mysql import MySqlOperator
 from airflow.operators.python import PythonOperator
@@ -23,17 +26,23 @@ with DAG(
     catchup=False,
 ) as dag:
 
-    create_table = MySqlOperator(
-        task_id="create_table",
+    create_insurance_table = MySqlOperator(
+        task_id="create_insurance_table",
         mysql_conn_id="meowmung_mysql",
         sql="""
-            CREATE TABLE IF NOT EXISTS Insurance (
+        CREATE TABLE IF NOT EXISTS Insurance (
             insurance_id VARCHAR(25) PRIMARY KEY,
             company VARCHAR(25),
             insurance_item VARCHAR(50)
-            );
+        );
+    """,
+    )
 
-            CREATE TABLE IF NOT EXISTS Terms (
+    create_terms_table = MySqlOperator(
+        task_id="create_terms_table",
+        mysql_conn_id="meowmung_mysql",
+        sql="""
+        CREATE TABLE IF NOT EXISTS Terms (
             term_id VARCHAR(25) PRIMARY KEY,
             insurance_id VARCHAR(25),
             term_name VARCHAR(255),
@@ -41,18 +50,24 @@ with DAG(
             term_limits VARCHAR(255),
             term_details VARCHAR(255),
             INDEX idx_insurance_id (insurance_id),
-            FOREIGN KEY (insurance_id) REFERENCES Insurance(insurance_id) 
-            );
+            FOREIGN KEY (insurance_id) REFERENCES Insurance(insurance_id)
+        );
+    """,
+    )
 
-            CREATE TABLE IF NOT EXISTS Results (
+    create_results_table = MySqlOperator(
+        task_id="create_results_table",
+        mysql_conn_id="meowmung_mysql",
+        sql="""
+        CREATE TABLE IF NOT EXISTS Results (
             result_id BIGINT PRIMARY KEY AUTO_INCREMENT,
             term_id VARCHAR(25),
             disease_name VARCHAR(25),
             UNIQUE (term_id, disease_name),
             INDEX idx_term_id (term_id),
             FOREIGN KEY (term_id) REFERENCES Terms(term_id)
-            );
-        """,
+        );
+    """,
     )
 
     insert_insurances = PythonOperator(
@@ -82,4 +97,11 @@ with DAG(
         },
     )
 
-    create_table >> insert_insurances >> insert_terms >> insert_results
+    (
+        create_insurance_table
+        >> create_terms_table
+        >> create_results_table
+        >> insert_insurances
+        >> insert_terms
+        >> insert_results
+    )
