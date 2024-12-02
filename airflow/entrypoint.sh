@@ -18,11 +18,4 @@ airflow scheduler &
 echo "Starting Airflow Webserver..."
 airflow webserver --port 8080 &
 
-# sleep 10
-
-# echo "Triggering DAGs..."
-# airflow dags trigger meowmung_insurancedata
-# airflow dags trigger meowmung_summary
-# airflow dags trigger meowming_trainer
-
 tail -f /dev/null
