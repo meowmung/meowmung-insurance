@@ -9,6 +9,7 @@ from datetime import datetime
 import pickle
 import mlflow
 import mlflow.sklearn
+from mlflow.tracking import MlflowClient
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import (
@@ -18,6 +19,8 @@ from sklearn.metrics import (
     recall_score,
     f1_score,
 )
+
+MLFLOW_TRACKING_URI = "localhost:5000"
 
 
 def fetch_data_from_mysql(**kwargs):
@@ -91,11 +94,11 @@ def push_model_to_mlflow(ti, **kwargs):
     with open(model_filename, "rb") as f:
         best_model = pickle.load(f)
 
-    mlflow.set_tracking_uri("http://localhost:5000")
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment("Dog Model Training")
 
-    with mlflow.start_run():
-        mlflow.sklearn.log_model(best_model, "best_model_dog")
+    with mlflow.start_run() as run:
+        mlflow.sklearn.log_model(best_model, "best_clf_dog")
 
         metrics = ti.xcom_pull(task_ids="train_and_tune_model", key="metrics")
         mlflow.log_metrics(
@@ -108,6 +111,30 @@ def push_model_to_mlflow(ti, **kwargs):
         )
 
         mlflow.log_param("classification_report", metrics["classification_report"])
+
+        model_uri = f"runs:/{run.info.run_id}/best_model_dog"
+        registered_model_name = "best_clf_dog"
+
+        client = MlflowClient()
+        try:
+            client.create_registered_model(registered_model_name)
+        except Exception:
+            print(f"Model '{registered_model_name}' already exists in the registry.")
+
+        model_version = client.create_model_version(
+            name=registered_model_name,
+            source=model_uri,
+            run_id=run.info.run_id,
+        )
+        print(f"Registered model version: {model_version.version}")
+
+        client.transition_model_version_stage(
+            name=registered_model_name,
+            version=model_version.version,
+            stage="Production",
+            archive_existing_versions=True,
+        )
+        print(f"Model version {model_version.version} transitioned to 'Production'")
 
 
 default_args = {

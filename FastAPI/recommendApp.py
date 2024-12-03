@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 app = FastAPI()
 
-MLFLOW_TRACKING_URI = "http://<mlflow-server-url>:5000"
+MLFLOW_TRACKING_URI = "localhost:5000"
 MODEL_STAGE = "Production"
 
 
@@ -24,49 +24,58 @@ def load_model(pet_type):
 
     return model
 
-    # try:
-    #     MODEL_NAME = f"best_clf_{pet_type}"
 
-    #     model_versions = client.search_model_versions(f"name='{MODEL_NAME}'")
+def load_best_model(pet_type, MODEL_STAGE, metric_name, ascending=True):
+    try:
+        MODEL_NAME = f"best_clf_{pet_type}"
+        client = MlflowClient()
 
-    #     if not model_versions:
-    #         raise ValueError(f"No registered models found for {MODEL_NAME}")
+        model_versions = client.search_model_versions(f"name='{MODEL_NAME}'")
 
-    #     production_models = [
-    #         mv for mv in model_versions if mv.current_stage == MODEL_STAGE
-    #     ]
+        if not model_versions:
+            raise ValueError(f"No registered models found for {MODEL_NAME}")
 
-    #     if not production_models:
-    #         raise ValueError(f"No models in stage '{MODEL_STAGE}' for {MODEL_NAME}")
+        production_models = [
+            mv for mv in model_versions if mv.current_stage == MODEL_STAGE
+        ]
 
-    #     model_metrics = []
-    #     for model_version in production_models:
-    #         run_id = model_version.run_id
-    #         run_data = client.get_run(run_id).data
-    #         metric_value = run_data.metrics.get(metric_name)
-    #         if metric_value is not None:
-    #             model_metrics.append((model_version.version, metric_value))
+        if not production_models:
+            raise ValueError(f"No models in stage '{MODEL_STAGE}' for {MODEL_NAME}")
 
-    #     if not model_metrics:
-    #         raise ValueError(f"No metrics found for models in stage '{MODEL_STAGE}'")
+        model_metrics = []
+        for model_version in production_models:
+            run_id = model_version.run_id
+            run_data = client.get_run(run_id).data
+            metric_value = run_data.metrics.get(metric_name)
+            if metric_value is not None:
+                model_metrics.append((model_version.version, metric_value))
 
-    #     model_metrics.sort(key=lambda x: x[1], reverse=not ascending)
-    #     best_model_version = model_metrics[0][0]
+        if not model_metrics:
+            raise ValueError(f"No metrics found for models in stage '{MODEL_STAGE}'")
 
-    #     print(f"Best model version: {best_model_version} with {metric_name}: {model_metrics[0][1]}")
+        model_metrics.sort(key=lambda x: x[1], reverse=not ascending)
+        best_model_version = model_metrics[0][0]
 
-    #     model_uri = f"models:/{MODEL_NAME}/{best_model_version}"
-    #     model = mlflow.pyfunc.load_model(model_uri)
+        print(
+            f"Best model version: {best_model_version} with {metric_name}: {model_metrics[0][1]}"
+        )
 
-    #     print(f"Model {MODEL_NAME} (version {best_model_version}) loaded successfully.")
-    #     return model
+        model_uri = f"models:/{MODEL_NAME}/{best_model_version}"
+        model = mlflow.pyfunc.load_model(model_uri)
 
-    # except Exception as e:
-    #     print(f"Error loading best model: {str(e)}")
-    #     raise
+        print(f"Model {MODEL_NAME} (version {best_model_version}) loaded successfully.")
+        return model
+
+    except Exception as e:
+        print(f"Error loading best model: {str(e)}")
+        raise
 
 
 def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
+
+    # model = load_best_model(
+    #     pet_type, MODEL_STAGE, metric_name="accuracy", ascending=True
+    # )
 
     model = load_model(pet_type)
 
