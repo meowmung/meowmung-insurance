@@ -12,21 +12,13 @@ from dotenv import load_dotenv
 
 app = FastAPI()
 
-MLFLOW_TRACKING_URI = "localhost:5000"
+MLFLOW_TRACKING_URI = "http://localhost:5000"
 MODEL_STAGE = "Production"
-
-
-def load_model(pet_type):
-    file_path = "models/ill_pred_rfclf.pkl"
-
-    with open(file_path, "rb") as f:
-        model = pickle.load(f)
-
-    return model
 
 
 def load_best_model(pet_type, MODEL_STAGE, metric_name, ascending=True):
     try:
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
         MODEL_NAME = f"best_clf_{pet_type}"
         client = MlflowClient()
 
@@ -48,22 +40,18 @@ def load_best_model(pet_type, MODEL_STAGE, metric_name, ascending=True):
             run_data = client.get_run(run_id).data
             metric_value = run_data.metrics.get(metric_name)
             if metric_value is not None:
-                model_metrics.append((model_version.version, metric_value))
+                model_metrics.append((run_id, metric_value))
 
         if not model_metrics:
             raise ValueError(f"No metrics found for models in stage '{MODEL_STAGE}'")
 
         model_metrics.sort(key=lambda x: x[1], reverse=not ascending)
-        best_model_version = model_metrics[0][0]
+        best_run_id = model_metrics[0][0]
 
-        print(
-            f"Best model version: {best_model_version} with {metric_name}: {model_metrics[0][1]}"
-        )
+        model_uri = f"runs:/{best_run_id}/best_clf_{pet_type}"
+        model = mlflow.sklearn.load_model(model_uri)
 
-        model_uri = f"models:/{MODEL_NAME}/{best_model_version}"
-        model = mlflow.pyfunc.load_model(model_uri)
-
-        print(f"Model {MODEL_NAME} (version {best_model_version}) loaded successfully.")
+        print(f"Model (run_id: {best_run_id}) loaded successfully.")
         return model
 
     except Exception as e:
@@ -73,20 +61,18 @@ def load_best_model(pet_type, MODEL_STAGE, metric_name, ascending=True):
 
 def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
 
-    # model = load_best_model(
-    #     pet_type, MODEL_STAGE, metric_name="accuracy", ascending=True
-    # )
-
-    model = load_model(pet_type)
+    model = load_best_model(
+        pet_type, MODEL_STAGE, metric_name="accuracy", ascending=True
+    )
 
     X = pd.DataFrame(
         [
             {
-                "metadata_id_age": age,
-                "metadata_physical_weight": weight,
-                "metadata_breeding_food-amount": food_count,
-                "encoded_metadata_id_breed": breed,
-                "encoded_metadata_id_sex": gender,
+                "age": age,
+                "weight": weight,
+                "food_count": food_count,
+                "breed_code": breed,
+                "gender": gender,
                 "neutered": neutered,
             }
         ]
@@ -99,7 +85,7 @@ def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
         if predicted_code in [0, 1, 2]:
             return predicted_code
         elif predicted_code == 3:
-            return 6
+            return 5
         elif predicted_code == 4:
             return 3
 
@@ -165,7 +151,7 @@ class InfoRequest(BaseModel):
 
 
 class RecommendationResponse(BaseModel):
-    illness: int
+    disease: int
 
 
 @app.post("/insurance/recommend", response_model=RecommendationResponse)
@@ -202,7 +188,7 @@ async def return_illness(request: InfoRequest):
         )
 
         if isinstance(illness, int):
-            return RecommendationResponse(illness=illness)
+            return RecommendationResponse(disease=illness)
         else:
             raise ValueError("Invalid illness value returned from pred_ill")
     except Exception as e:

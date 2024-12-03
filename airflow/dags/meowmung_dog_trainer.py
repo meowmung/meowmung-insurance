@@ -20,7 +20,7 @@ from sklearn.metrics import (
     f1_score,
 )
 
-MLFLOW_TRACKING_URI = "localhost:5000"
+MLFLOW_TRACKING_URI = "http://localhost:5000"
 
 
 def fetch_data_from_mysql(**kwargs):
@@ -40,7 +40,7 @@ def model_training_and_tuning(ti, **kwargs):
         raise ValueError("No data found in XCom")
 
     df = pd.read_json(json_data)
-    X = df.drop("disease_code", axis=1)
+    X = df.drop(["train_id", "disease_code"], axis=1)
     y = df["disease_code"]
 
     rf = RandomForestClassifier()
@@ -57,8 +57,6 @@ def model_training_and_tuning(ti, **kwargs):
     grid_search.fit(X, y)
 
     best_model = grid_search.best_estimator_
-    best_params = grid_search.best_params_
-    best_score = grid_search.best_score_
 
     y_pred = grid_search.predict(X)
     report = classification_report(y, y_pred)
@@ -112,7 +110,7 @@ def push_model_to_mlflow(ti, **kwargs):
 
         mlflow.log_param("classification_report", metrics["classification_report"])
 
-        model_uri = f"runs:/{run.info.run_id}/best_model_dog"
+        model_uri = f"runs:/{run.info.run_id}/best_clf_dog"
         registered_model_name = "best_clf_dog"
 
         client = MlflowClient()
