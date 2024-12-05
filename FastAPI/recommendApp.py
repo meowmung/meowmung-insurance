@@ -64,7 +64,7 @@ def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
     model = load_best_model(
         pet_type, MODEL_STAGE, metric_name="accuracy", ascending=True
     )
-
+    # OHE
     X = pd.DataFrame(
         [
             {

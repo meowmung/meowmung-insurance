@@ -1,11 +1,11 @@
 from airflow import DAG
 from airflow.providers.mysql.hooks.mysql import MySqlHook
 from airflow.operators.python import PythonOperator
+import pandas as pd
+from datetime import datetime
 import pymysql
 
 pymysql.install_as_MySQLdb()
-import pandas as pd
-from datetime import datetime
 import pickle
 import mlflow
 import mlflow.sklearn

@@ -21,8 +21,6 @@ COPY airflow/entrypoint.sh /entrypoint.sh
 USER root
 RUN chmod +x /entrypoint.sh
 
-# COPY airflow/dags/ $AIRFLOW_HOME/dags/
-
 EXPOSE 8080
 
 ENTRYPOINT ["/entrypoint.sh"]
