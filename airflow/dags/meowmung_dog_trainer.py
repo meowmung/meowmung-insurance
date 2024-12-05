@@ -1,17 +1,18 @@
 from airflow import DAG
 from airflow.providers.mysql.hooks.mysql import MySqlHook
 from airflow.operators.python import PythonOperator
-import pandas as pd
-from datetime import datetime
 import pymysql
 
 pymysql.install_as_MySQLdb()
+import pandas as pd
+from datetime import datetime
 import pickle
 import mlflow
 import mlflow.sklearn
 from mlflow.tracking import MlflowClient
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     classification_report,
     accuracy_score,
@@ -27,6 +28,7 @@ def fetch_data_from_mysql(**kwargs):
     mysql_hook = MySqlHook(mysql_conn_id="meowmung_mysql")
     query = "SELECT * FROM traindata_dog;"
     df = mysql_hook.get_pandas_df(query)
+    print(df["age"].unique())
 
     if df.empty:
         raise ValueError("No data found in MySQL")
@@ -43,6 +45,10 @@ def model_training_and_tuning(ti, **kwargs):
     X = df.drop(["train_id", "disease_code"], axis=1)
     y = df["disease_code"]
 
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, stratify=y, random_state=42
+    )
+
     rf = RandomForestClassifier()
     param_grid = {
         "n_estimators": [100, 200, 300],
@@ -54,17 +60,16 @@ def model_training_and_tuning(ti, **kwargs):
     }
 
     grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, n_jobs=-1)
-    grid_search.fit(X, y)
+    grid_search.fit(X_train, y_train)
 
     best_model = grid_search.best_estimator_
+    y_pred = grid_search.predict(X_test)
+    report = classification_report(y_test, y_pred)
 
-    y_pred = grid_search.predict(X)
-    report = classification_report(y, y_pred)
-
-    accuracy = accuracy_score(y, y_pred)
-    precision = precision_score(y, y_pred, average="weighted")
-    recall = recall_score(y, y_pred, average="weighted")
-    f1 = f1_score(y, y_pred, average="weighted")
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred, average="weighted")
+    recall = recall_score(y_test, y_pred, average="weighted")
+    f1 = f1_score(y_test, y_pred, average="weighted")
 
     model_filename = "/tmp/best_model_dog.pkl"
     with open(model_filename, "wb") as f:
@@ -93,7 +98,7 @@ def push_model_to_mlflow(ti, **kwargs):
         best_model = pickle.load(f)
 
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    mlflow.set_experiment("Dog Model Training")
+    mlflow.set_experiment("Meowmung Dog Trainer")
 
     with mlflow.start_run() as run:
         mlflow.sklearn.log_model(best_model, "best_clf_dog")
@@ -145,7 +150,7 @@ with DAG(
     "meowmung_dog_trainer",
     default_args=default_args,
     schedule="@monthly",
-    tags=["meowmung", "insurance_data", "pet_health"],
+    tags=["meowmung", "pet_health"],
 ) as dag:
 
     fetch_data = PythonOperator(

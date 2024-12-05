@@ -64,7 +64,7 @@ def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
     model = load_best_model(
         pet_type, MODEL_STAGE, metric_name="accuracy", ascending=True
     )
-    # OHE
+
     X = pd.DataFrame(
         [
             {
@@ -81,18 +81,7 @@ def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
 
     predicted_code = int(predicted)
 
-    if pet_type == "dog":
-        if predicted_code in [0, 1, 2]:
-            return predicted_code
-        elif predicted_code == 3:
-            return 5
-        elif predicted_code == 4:
-            return 3
-
-    if pet_type == "cat":
-        if predicted_code == 0:
-            return 0
-        return predicted_code + 3
+    return predicted_code
 
 
 def insert_info(
@@ -187,10 +176,8 @@ async def return_illness(request: InfoRequest):
             neutered=neutered,
         )
 
-        if isinstance(illness, int):
-            return RecommendationResponse(disease=illness)
-        else:
-            raise ValueError("Invalid illness value returned from pred_ill")
+        return RecommendationResponse(disease=illness)
+
     except Exception as e:
         print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

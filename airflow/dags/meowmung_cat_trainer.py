@@ -93,7 +93,7 @@ def push_model_to_mlflow(ti, **kwargs):
         best_model = pickle.load(f)
 
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    mlflow.set_experiment("Cat Model Training")
+    mlflow.set_experiment("Meowmung Cat Trainer")
 
     with mlflow.start_run() as run:
         mlflow.sklearn.log_model(best_model, "best_clf_cat")
@@ -145,7 +145,7 @@ with DAG(
     "meowmung_cat_trainer",
     default_args=default_args,
     schedule="@monthly",
-    tags=["meowmung", "insurance_data", "pet_health"],
+    tags=["meowmung", "pet_health"],
 ) as dag:
 
     fetch_data = PythonOperator(
