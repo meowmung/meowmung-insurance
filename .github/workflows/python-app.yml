@@ -7,8 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dockerfile: [airflow/dockerfile.mysql, airflow/dockerfile.airflow, FastAPI/dockerfile.app]
-        repo: [database, airflow, recommendation]
+        dockerfile: [mlflow/dockerfile.mlflow, airflow/dockerfile.airflow, FastAPI/dockerfile.app]
+        repo: [mlflow, airflow, recommendation]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
