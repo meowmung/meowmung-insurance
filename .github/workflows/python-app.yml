@@ -1,7 +1,7 @@
 name: Docker Build & Push Action
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ develop ]
 jobs:
   build:
     runs-on: ubuntu-latest
