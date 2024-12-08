@@ -87,7 +87,7 @@ class SummaryBot:
 
 
 def get_insurance(company):
-    filepath = "config/insurance_items.yaml"
+    filepath = "data/config/insurance_items.yaml"
     with open(filepath, "r", encoding="utf-8") as file:
         insurance_items = yaml.safe_load(file)
     return insurance_items.get(company)
@@ -123,6 +123,6 @@ def save_summaries(company, form):
 
     summary = bot.summarize(company)
 
-    output_filename = f"../summaries/{company}_{form}.json"
+    output_filename = f"../data/summaries/{company}_{form}.json"
     with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=4)

@@ -6,7 +6,9 @@ COPY airflow/requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ./airflow/ airflow/
-COPY ./code/ code/
+COPY ./bots/ bots/
+COPY ./data /data
+
 
 ENV AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite://///airflow.db
 ENV AIRFLOW_HOME=/opt/airflow

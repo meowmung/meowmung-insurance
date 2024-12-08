@@ -10,7 +10,7 @@ from airflow.operators.python import PythonOperator
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
-from code.bots.query import insert_insurances, insert_terms, insert_results
+from bots.query import insert_insurances, insert_terms, insert_results
 
 
 default_args = {
@@ -74,7 +74,7 @@ with DAG(
         task_id="insert_insurances",
         python_callable=insert_insurances,
         op_kwargs={
-            "dir_path": "summaries/*.json",
+            "dir_path": "data/summaries/*.json",
             "table_name": "Insurance",
         },
     )
@@ -83,7 +83,7 @@ with DAG(
         task_id="insert_terms",
         python_callable=insert_terms,
         op_kwargs={
-            "dir_path": "summaries/*.json",
+            "dir_path": "data/summaries/*.json",
             "table_name": "Terms",
         },
     )
@@ -92,7 +92,7 @@ with DAG(
         task_id="insert_results",
         python_callable=insert_results,
         op_kwargs={
-            "dir_path": "summaries/*.json",
+            "dir_path": "data/summaries/*.json",
             "table_name": "Results",
         },
     )
