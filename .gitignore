@@ -129,7 +129,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-code/data/.DS_Store
+data/.DS_Store
 mlflow/mlruns/
 mlflow/mlartifacts/
 
