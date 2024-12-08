@@ -7,17 +7,25 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dockerfile: [mlflow/dockerfile.mlflow, airflow/dockerfile.airflow, FastAPI/dockerfile.app]
-        repo: [mlflow, airflow, recommendation]
+        include:
+          - dockerfile: mlflow/dockerfile.mlflow
+            repo: mlflow
+          - dockerfile: airflow/dockerfile.airflow
+            repo: airflow
+          - dockerfile: FastAPI/dockerfile.app
+            repo: recommendation
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+      
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
+      
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
+      
       - name: Build and push Docker image
         uses: mr-smithers-excellent/docker-build-push@v5
         with:
