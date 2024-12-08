@@ -129,9 +129,9 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-data/*
-data/json/*
-!data/json/summaries/
+data/.DS_Store
+mlflow/mlruns/
+mlflow/mlartifacts/
 
 
 # Spyder project settings
