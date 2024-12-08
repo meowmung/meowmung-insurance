@@ -1,6 +1,9 @@
 import json
 import glob
 from airflow.providers.mysql.hooks.mysql import MySqlHook
+import pymysql
+
+pymysql.install_as_MySQLdb()
 
 
 def generate_insurance_query(file_path, table_name):
@@ -98,11 +101,3 @@ def insert_results(dir_path, table_name, **kwargs):
         mysql_hook = MySqlHook(mysql_conn_id="meowmung_mysql")
         for query in queries:
             mysql_hook.run(query)
-
-
-if __name__ == "__main__":
-    # ----------debug query--------
-    query_list = generate_term_query("summaries/DB_cat_summary.json", "Insurance")
-
-    for query in query_list:
-        print(query)

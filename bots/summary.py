@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from loaders.dataloader import *
+from bots.dataloader import *
 import json
 import re
 import yaml
@@ -84,12 +84,10 @@ class SummaryBot:
             return illness_json.get("illness", ["기타"])
         except json.JSONDecodeError:
             return ["기타"]
-        # illness_json = json.loads(response.content)
-        # return illness_json.get("illness")
 
 
 def get_insurance(company):
-    filepath = "config/insurance_items.yaml"
+    filepath = "data/config/insurance_items.yaml"
     with open(filepath, "r", encoding="utf-8") as file:
         insurance_items = yaml.safe_load(file)
     return insurance_items.get(company)
@@ -125,38 +123,6 @@ def save_summaries(company, form):
 
     summary = bot.summarize(company)
 
-    output_filename = f"../summaries/{company}_{form}.json"
+    output_filename = f"../data/summaries/{company}_{form}.json"
     with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=4)
-
-
-# if __name__ == "__main__":
-#     file_paths = glob.glob(f"data/pdf/*.pdf")
-
-#     for path in file_paths:
-#         company = extract_company_name(path)
-#         save_summaries(company, "summary")
-#         print(f"summary for {path} saved")
-
-#     ---------debug by file------------
-#     load_dotenv()
-#     company = "DB_cat"
-#     loader_path = f"data/dataloaders/{company}_loader.pkl"
-#     loader = load_loader(loader_path)
-
-#     bot = SummaryBot(
-#         model_name="gpt-4o-mini", streaming=False, temperature=0.3, loader=loader
-#     )
-
-#     summary = bot.summarize(company)
-#     print(summary)
-
-#     ----------debug query--------
-#     pet_type = "dog"
-#     company = "KB_dog"
-#     file_path = f"summaries/{pet_type}/{company}_summary.json"
-
-#     query_list = generate_term_query(file_path, "TableName")
-
-#     for query in query_list:
-#         print(query)

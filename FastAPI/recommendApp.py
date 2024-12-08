@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import pickle
 import pandas as pd
 import uvicorn
 import mlflow
+from mlflow.tracking import MlflowClient
 import os
 import pymysql
 from dotenv import load_dotenv
@@ -11,43 +11,67 @@ from dotenv import load_dotenv
 
 app = FastAPI()
 
-MLFLOW_TRACKING_URI = "http://<mlflow-server-url>:5000"
+MLFLOW_TRACKING_URI = "http://localhost:5000"
 MODEL_STAGE = "Production"
 
 
-def load_model(pet_type):
-    file_path = "models/ill_pred_rfclf.pkl"
+def load_best_model(pet_type, MODEL_STAGE, metric_name, ascending=True):
+    try:
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+        MODEL_NAME = f"best_clf_{pet_type}"
+        client = MlflowClient()
 
-    with open(file_path, "rb") as f:
-        model = pickle.load(f)
+        model_versions = client.search_model_versions(f"name='{MODEL_NAME}'")
 
-    return model
+        if not model_versions:
+            raise ValueError(f"No registered models found for {MODEL_NAME}")
 
-    # try:
-    #     # 모델 로드 (해당 모델이 등록된 이름과 단계에 따라 호출)
-    #     MODEL_NAME = f"best_clf_{pet_type}"
-    #     model = mlflow.pyfunc.load_model(
-    #         model_uri=f"models:/{MODEL_NAME}/{MODEL_STAGE}"
-    #     )
-    #     print(f"Model {MODEL_NAME} loaded successfully.")
-    #     return model
-    # except Exception as e:
-    #     print(f"Error loading model: {str(e)}")
-    #     raise
+        production_models = [
+            mv for mv in model_versions if mv.current_stage == MODEL_STAGE
+        ]
+
+        if not production_models:
+            raise ValueError(f"No models in stage '{MODEL_STAGE}' for {MODEL_NAME}")
+
+        model_metrics = []
+        for model_version in production_models:
+            run_id = model_version.run_id
+            run_data = client.get_run(run_id).data
+            metric_value = run_data.metrics.get(metric_name)
+            if metric_value is not None:
+                model_metrics.append((run_id, metric_value))
+
+        if not model_metrics:
+            raise ValueError(f"No metrics found for models in stage '{MODEL_STAGE}'")
+
+        model_metrics.sort(key=lambda x: x[1], reverse=not ascending)
+        best_run_id = model_metrics[0][0]
+
+        model_uri = f"runs:/{best_run_id}/best_clf_{pet_type}"
+        model = mlflow.sklearn.load_model(model_uri)
+
+        print(f"Model (run_id: {best_run_id}) loaded successfully.")
+        return model
+
+    except Exception as e:
+        print(f"Error loading best model: {str(e)}")
+        raise
 
 
 def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
 
-    model = load_model(pet_type)
+    model = load_best_model(
+        pet_type, MODEL_STAGE, metric_name="accuracy", ascending=True
+    )
 
     X = pd.DataFrame(
         [
             {
-                "metadata_id_age": age,
-                "metadata_physical_weight": weight,
-                "metadata_breeding_food-amount": food_count,
-                "encoded_metadata_id_breed": breed,
-                "encoded_metadata_id_sex": gender,
+                "age": age,
+                "weight": weight,
+                "food_count": food_count,
+                "breed_code": breed,
+                "gender": gender,
                 "neutered": neutered,
             }
         ]
@@ -56,18 +80,7 @@ def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
 
     predicted_code = int(predicted)
 
-    if pet_type == "dog":
-        if predicted_code in [0, 1, 2]:
-            return predicted_code
-        elif predicted_code == 3:
-            return 6
-        elif predicted_code == 4:
-            return 3
-
-    if pet_type == "cat":
-        if predicted_code == 0:
-            return 0
-        return predicted_code + 3
+    return predicted_code
 
 
 def insert_info(
@@ -126,7 +139,7 @@ class InfoRequest(BaseModel):
 
 
 class RecommendationResponse(BaseModel):
-    illness: int
+    disease: int
 
 
 @app.post("/insurance/recommend", response_model=RecommendationResponse)
@@ -162,14 +175,12 @@ async def return_illness(request: InfoRequest):
             neutered=neutered,
         )
 
-        if isinstance(illness, int):
-            return RecommendationResponse(illness=illness)
-        else:
-            raise ValueError("Invalid illness value returned from pred_ill")
+        return RecommendationResponse(disease=illness)
+
     except Exception as e:
         print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
-    uvicorn.run("FastAPI.advancedApp:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("FastAPI.recommendApp:app", host="127.0.0.1", port=8000, reload=True)

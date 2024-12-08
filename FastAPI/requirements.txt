@@ -1,10 +1,5 @@
 OpenAI
 pandas
-python-dotenv
-langchain
-langchain_community
-langchain_openai
-pypdf
 fastapi
 scikit-learn
 pydantic
@@ -13,3 +8,4 @@ mlflow
 prometheus-fastapi-instrumentator
 pyyaml
 pymysql
+python-dotenv
