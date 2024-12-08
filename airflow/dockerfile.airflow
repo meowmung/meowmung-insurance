@@ -3,23 +3,19 @@ FROM apache/airflow:2.10.3-python3.9
 WORKDIR /opt
 
 COPY airflow/requirements.txt requirements.txt
-COPY airflow/airflow.db airflow.db
-COPY bots/ bots/
-# COPY data/dataloaders data/dataloaders
-# COPY data/pdf data/pdf
-# COPY summaries/ summaries/
-
 RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ./airflow/ airflow/
+COPY ./code/ code/
 
 ENV AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite://///airflow.db
 ENV AIRFLOW_HOME=/opt/airflow
 
 WORKDIR $AIRFLOW_HOME
 
-COPY airflow/entrypoint.sh /entrypoint.sh
 USER root
-RUN chmod +x /entrypoint.sh
+RUN chmod +x entrypoint.sh
 
 EXPOSE 8080
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]

@@ -3,4 +3,8 @@ FROM ghcr.io/mlflow/mlflow:v2.18.0
 ENV MLFLOW_BACKEND_STORE_URI=sqlite:///mlflow.db \
     MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/mlruns
 
+EXPOSE 5000
+
+WORKDIR /mlflow
+
 CMD ["mlflow", "server", "--host", "0.0.0.0", "--port", "5000"]
