@@ -10,7 +10,7 @@ from airflow.operators.python import PythonOperator
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
-from bots.query import insert_insurances, insert_terms, insert_results
+from code.bots.query import insert_insurances, insert_terms, insert_results
 
 
 default_args = {
