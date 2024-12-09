@@ -18,6 +18,6 @@ WORKDIR $AIRFLOW_HOME
 USER root
 RUN chmod +x entrypoint.sh
 
-EXPOSE 8080
+EXPOSE 8087
 
 ENTRYPOINT ["./entrypoint.sh"]
