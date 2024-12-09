@@ -5,6 +5,7 @@ import pymysql
 
 pymysql.install_as_MySQLdb()
 import pandas as pd
+import os
 from datetime import datetime
 import pickle
 import mlflow
@@ -20,8 +21,10 @@ from sklearn.metrics import (
     recall_score,
     f1_score,
 )
+from dotenv import load_dotenv
 
-MLFLOW_TRACKING_URI = "http://localhost:5000"
+load_dotenv()
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI") + ":5000"
 
 
 def fetch_data_from_mysql(**kwargs):

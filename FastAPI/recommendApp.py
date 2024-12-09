@@ -1,17 +1,18 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import pandas as pd
-import uvicorn
 import mlflow
 from mlflow.tracking import MlflowClient
 import os
 import pymysql
 from dotenv import load_dotenv
 
+load_dotenv()
 
 app = FastAPI()
 
-MLFLOW_TRACKING_URI = "http://localhost:5000"
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI") + ":5000"
+MYSQL_HOST = os.getenv("MYSQL_HOST") + ":3306"
 MODEL_STAGE = "Production"
 
 
@@ -97,10 +98,10 @@ def insert_info(
 
     try:
         conn = pymysql.connect(
-            host="localhost",
+            host=MYSQL_HOST,
             port=3306,
             user="root",
-            password=os.getenv("MYSQL_ROOT_PASSWORD"),
+            password="1234",
             database="meowmung",
         )
         cursor = conn.cursor()
@@ -180,7 +181,3 @@ async def return_illness(request: InfoRequest):
     except Exception as e:
         print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-if __name__ == "__main__":
-    uvicorn.run("FastAPI.recommendApp:app", host="127.0.0.1", port=8000, reload=True)
