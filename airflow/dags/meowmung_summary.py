@@ -17,7 +17,7 @@ def summarize_dir():
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
     from bots.summary import save_summaries, extract_company_name
 
-    file_paths = glob.glob(f"../../data/pdf/*.pdf")
+    file_paths = glob.glob(f"/opt/data/pdf/*.pdf")
 
     for path in file_paths:
         company = extract_company_name(path)

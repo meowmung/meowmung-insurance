@@ -74,7 +74,7 @@ with DAG(
         task_id="insert_insurances",
         python_callable=insert_insurances,
         op_kwargs={
-            "dir_path": "data/summaries/*.json",
+            "dir_path": "/opt/data/summaries/*.json",
             "table_name": "Insurance",
         },
     )
@@ -83,7 +83,7 @@ with DAG(
         task_id="insert_terms",
         python_callable=insert_terms,
         op_kwargs={
-            "dir_path": "data/summaries/*.json",
+            "dir_path": "/opt/data/summaries/*.json",
             "table_name": "Terms",
         },
     )
@@ -92,7 +92,7 @@ with DAG(
         task_id="insert_results",
         python_callable=insert_results,
         op_kwargs={
-            "dir_path": "data/summaries/*.json",
+            "dir_path": "/opt/data/summaries/*.json",
             "table_name": "Results",
         },
     )

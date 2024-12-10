@@ -114,7 +114,7 @@ def clean_text(text):
 
 def save_summaries(company, form):
     load_dotenv()
-    loader_path = f"../data/dataloaders/{company}_loader.pkl"
+    loader_path = f"/optdata/dataloaders/{company}_loader.pkl"
     loader = load_loader(loader_path)
 
     bot = SummaryBot(
@@ -123,6 +123,6 @@ def save_summaries(company, form):
 
     summary = bot.summarize(company)
 
-    output_filename = f"../data/summaries/{company}_{form}.json"
+    output_filename = f"/opt/data/summaries/{company}_{form}.json"
     with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=4)
