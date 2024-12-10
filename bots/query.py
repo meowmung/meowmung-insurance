@@ -2,8 +2,16 @@ import json
 import glob
 from airflow.providers.mysql.hooks.mysql import MySqlHook
 import pymysql
+import yaml
 
 pymysql.install_as_MySQLdb()
+
+
+def get_insurance(company):
+    filepath = "/opt/data/config/insurance_logo.yaml"
+    with open(filepath, "r", encoding="utf-8") as file:
+        insurance_logo = yaml.safe_load(file)
+    return insurance_logo.get(company)
 
 
 def generate_insurance_query(file_path, table_name):
@@ -12,14 +20,16 @@ def generate_insurance_query(file_path, table_name):
     insurance_id = data.get("company")
     company = insurance_id.split("_")[0]
     insurance = data.get("insurance")
+    logo = get_insurance(company)
 
     query_list = []
     query_list.append(
         f"""INSERT INTO {table_name} (insurance_id, company, insurance_item)
-            VALUES("{insurance_id}", "{company}", "{insurance}")
+            VALUES("{insurance_id}", "{company}", "{insurance}, {logo}")
             ON DUPLICATE KEY UPDATE
                 company = VALUES(company),
-                insurance_item = VALUES(insurance_item);"""
+                insurance_item = VALUES(insurance_item),
+                logo = VALUES(logo);"""
     )
 
     return query_list
