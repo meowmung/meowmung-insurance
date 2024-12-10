@@ -33,7 +33,8 @@ with DAG(
         CREATE TABLE IF NOT EXISTS Insurance (
             insurance_id VARCHAR(25) PRIMARY KEY,
             company VARCHAR(25),
-            insurance_item VARCHAR(50)
+            insurance_item VARCHAR(50),
+            logo VARCHAR(50)
         );
     """,
     )
@@ -44,8 +45,8 @@ with DAG(
         sql="""
         CREATE TABLE IF NOT EXISTS Terms (
             term_id VARCHAR(25) PRIMARY KEY,
-            insurance_id VARCHAR(25),
-            term_name VARCHAR(255),
+            insurance_id VARCHAR(50),
+            term_name VARCHAR(50),
             term_causes VARCHAR(255),
             term_limits VARCHAR(255),
             term_details VARCHAR(255),
