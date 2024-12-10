@@ -19,7 +19,7 @@ echo "Waiting for Airflow Scheduler to start..."
 sleep 10 
 
 echo "Starting Airflow Webserver..."
-airflow webserver --port 8080 &
+airflow webserver --port 8087 &
 
 echo "Creating MySQL connector..."
 python connector.py
