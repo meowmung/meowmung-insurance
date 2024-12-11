@@ -130,8 +130,11 @@ ENV/
 env.bak/
 venv.bak/
 data/.DS_Store
-mlflow/mlruns/
-mlflow/mlartifacts/
+.DS_Store
+airflow/.DS_Store
+mysql/.DS_Store
+mlruns/
+mlartifacts/
 
 
 # Spyder project settings
