@@ -132,6 +132,7 @@ venv.bak/
 data/.DS_Store
 .DS_Store
 airflow/.DS_Store
+airflow/airflow.db
 mysql/.DS_Store
 mlruns/
 mlartifacts/
