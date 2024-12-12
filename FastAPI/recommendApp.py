@@ -1,8 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import pandas as pd
-import mlflow
-from mlflow.tracking import MlflowClient
 import os
 import pymysql
 from dotenv import load_dotenv

@@ -228,4 +228,4 @@ with DAG(
 
     save_model = PythonOperator(task_id="save_model", python_callable=save_model)
 
-    fetch_data >> train_model >> push_mlflow
+    fetch_data >> train_model >> push_mlflow >> save_model
