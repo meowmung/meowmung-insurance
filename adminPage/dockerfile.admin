@@ -1,0 +1,15 @@
+FROM python:3.9
+
+COPY adminPage/requirements.txt requirements.txt
+
+RUN pip install -r requirements.txt
+
+WORKDIR /admin
+
+COPY ./adminPage /admin/adminPage
+COPY ./bots/summary.py /admin/bots/summary.py
+
+EXPOSE 8000
+
+CMD ["uvicorn", "adminPage.adminApp:app", "--host", "0.0.0.0", "--port", "8008"]
+

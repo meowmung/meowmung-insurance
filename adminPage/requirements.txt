@@ -1,0 +1,8 @@
+fastapi
+pydantic
+uvicorn
+prometheus-fastapi-instrumentator
+python-dotenv
+langchain_community
+langchain
+pymupdf
