@@ -15,11 +15,12 @@ class SummaryBot:
 
     def summarize(self, company):
         special_terms = self.loader.special_terms
-        special_terms_name_list = [term["name"] for term in special_terms]
+        print(special_terms)
+        print("2")
         insurance_info = {"company": company, "insurance": get_insurance(company)}
         special_terms_info = []
 
-        for term_name in special_terms_name_list:
+        for term_name in special_terms:
             term_summary = self.retrieve_term_summary(term_name)
             illness = self.infer_illness(term_name, term_summary)
             info = {
@@ -112,10 +113,8 @@ def clean_text(text):
     return cleaned_text
 
 
-def save_summaries(company, form):
+def save_summaries(loader, company):
     load_dotenv()
-    loader_path = f"/optdata/dataloaders/{company}_loader.pkl"
-    loader = load_loader(loader_path)
 
     bot = SummaryBot(
         model_name="gpt-4o-mini", streaming=False, temperature=0.3, loader=loader
@@ -123,6 +122,6 @@ def save_summaries(company, form):
 
     summary = bot.summarize(company)
 
-    output_filename = f"/opt/data/summaries/{company}_{form}.json"
+    output_filename = f"{company}_summary.json"
     with open(output_filename, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=4)

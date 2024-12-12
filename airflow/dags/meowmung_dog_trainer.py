@@ -187,7 +187,7 @@ def save_model(pet_type, MODEL_STAGE, metric_name, ascending=True, **kwargs):
 
         print(f"Model (run_id: {best_run_id}) loaded successfully.")
 
-        local_model_path = f"data/models/best_clf_{pet_type}.pkl"
+        local_model_path = f"{os.getenv("S3_URI")}data/models/best_clf_{pet_type}.pkl"
         with open(local_model_path, "wb") as f:
             pickle.dump(model, f)
 

@@ -3,6 +3,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import pickle
 from pathlib import Path
 import re
+import os
 import fitz
 
 
@@ -15,11 +16,10 @@ class Document:
 
 class Loader:
     def __init__(self, file_path, terms):
-        self.special_terms = self.extract_terms(file_path, file_path, terms)
+        self.special_terms = self.extract_terms(file_path, terms)
         self.docs = self.load_file(file_path)
-        self.save_loader(f"data/dataloaders/{extract_company_name(file_path)}.pkl")
 
-    def extract_terms(self, pdf_path, output_path, terms):
+    def extract_terms(self, pdf_path, terms):
         print("extracting terms...")
         doc = fitz.open(pdf_path)
         extracted_terms = []
@@ -35,8 +35,12 @@ class Loader:
             page.add_highlight_annot(target)
             extracted_terms.append(term_name)
 
-        doc.save(output_path)
+        temp_path = pdf_path + ".temp"
+
+        doc.save(temp_path, incremental=False)
         doc.close()
+
+        os.replace(temp_path, pdf_path)
 
         return extracted_terms
 
@@ -109,3 +113,14 @@ def load_by_insurance(file_path):
     loader = Loader(file_path=file_path)
     loader.save_loader(f"data/dataloaders/{insurance_name}_loader.pkl")
     print(f"loader - {file_path}")
+
+
+if __name__ == "__main__":
+    terms = [
+        {"page": 5, "term_name": "반려동물의료비"},
+        {"page": 9, "term_name": "반려동물의료비확장보장(슬관절/고관절 탈구"},
+    ]
+
+    loader = Loader("data/pdf/KB_dog.pdf", terms)
+
+    print(loader.special_terms)

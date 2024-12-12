@@ -2,10 +2,15 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from bots.dataloader import *
 from dotenv import load_dotenv
+import os
+import uvicorn
+import boto3
+from bots.summary import *
 
 load_dotenv()
 
 app = FastAPI()
+s3 = boto3.client("s3")
 
 
 class InfoRequest(BaseModel):
@@ -14,16 +19,21 @@ class InfoRequest(BaseModel):
 
 
 @app.post("/insurance/admin")
-async def save_loader(request: InfoRequest):
+async def save_summary(request: InfoRequest):
     try:
         terms = request.terms
         file_path = request.file_path
 
-        loader = Loader(file_path, terms)
+        if not terms or not isinstance(terms, list):
+            raise HTTPException(status_code=400, detail="Invalid terms provided")
 
+        if not file_path or not isinstance(file_path, str):
+            raise HTTPException(status_code=400, detail="Invalid file_path provided")
+
+        loader = Loader(file_path, terms)
         company = extract_company_name(file_path)
-        loader_path = f"data/dataloaders/{company}_loader.pkl"
-        loader.save_loader(loader_path)
+
+        save_summaries(loader, company)
 
     except Exception as e:
         print(f"Error: {str(e)}")
