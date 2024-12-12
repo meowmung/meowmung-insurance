@@ -20,6 +20,7 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     f1_score,
+    matthews_corrcoef,
 )
 from dotenv import load_dotenv
 
@@ -73,6 +74,8 @@ def model_training_and_tuning(ti, **kwargs):
     precision = precision_score(y_test, y_pred, average="weighted")
     recall = recall_score(y_test, y_pred, average="weighted")
     f1 = f1_score(y_test, y_pred, average="weighted")
+    mcc = matthews_corrcoef(y_test, y_pred)
+    threat_score = precision + recall + f1
 
     model_filename = "/tmp/best_model_dog.pkl"
     with open(model_filename, "wb") as f:
@@ -87,6 +90,8 @@ def model_training_and_tuning(ti, **kwargs):
             "recall": recall,
             "f1_score": f1,
             "classification_report": report,
+            "matthews_corrcoef": mcc,
+            "threat_score": threat_score,
         },
     )
 
@@ -113,6 +118,8 @@ def push_model_to_mlflow(ti, **kwargs):
                 "precision": metrics["precision"],
                 "recall": metrics["recall"],
                 "f1_score": metrics["f1_score"],
+                "matthews_corrcoef": metrics["matthews_corrcoef"],
+                "threat_score": metrics["threat_score"],
             }
         )
 

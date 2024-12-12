@@ -13,17 +13,18 @@ import mlflow.sklearn
 from mlflow.tracking import MlflowClient
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     classification_report,
     accuracy_score,
     precision_score,
     recall_score,
     f1_score,
+    matthews_corrcoef,
 )
 from dotenv import load_dotenv
 
 load_dotenv()
-
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI") + ":5000"
 
 
@@ -31,6 +32,7 @@ def fetch_data_from_mysql(**kwargs):
     mysql_hook = MySqlHook(mysql_conn_id="meowmung_mysql")
     query = "SELECT * FROM traindata_cat;"
     df = mysql_hook.get_pandas_df(query)
+    print(df["age"].unique())
 
     if df.empty:
         raise ValueError("No data found in MySQL")
@@ -47,6 +49,10 @@ def model_training_and_tuning(ti, **kwargs):
     X = df.drop(["train_id", "disease_code"], axis=1)
     y = df["disease_code"]
 
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, stratify=y, random_state=42
+    )
+
     rf = RandomForestClassifier()
     param_grid = {
         "n_estimators": [100, 200, 300],
@@ -58,17 +64,18 @@ def model_training_and_tuning(ti, **kwargs):
     }
 
     grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, n_jobs=-1)
-    grid_search.fit(X, y)
+    grid_search.fit(X_train, y_train)
 
     best_model = grid_search.best_estimator_
+    y_pred = grid_search.predict(X_test)
+    report = classification_report(y_test, y_pred)
 
-    y_pred = grid_search.predict(X)
-    report = classification_report(y, y_pred)
-
-    accuracy = accuracy_score(y, y_pred)
-    precision = precision_score(y, y_pred, average="weighted")
-    recall = recall_score(y, y_pred, average="weighted")
-    f1 = f1_score(y, y_pred, average="weighted")
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred, average="weighted")
+    recall = recall_score(y_test, y_pred, average="weighted")
+    f1 = f1_score(y_test, y_pred, average="weighted")
+    mcc = matthews_corrcoef(y_test, y_pred)
+    threat_score = precision + recall + f1
 
     model_filename = "/tmp/best_model_cat.pkl"
     with open(model_filename, "wb") as f:
@@ -83,6 +90,8 @@ def model_training_and_tuning(ti, **kwargs):
             "recall": recall,
             "f1_score": f1,
             "classification_report": report,
+            "matthews_corrcoef": mcc,
+            "threat_score": threat_score,
         },
     )
 
@@ -97,7 +106,7 @@ def push_model_to_mlflow(ti, **kwargs):
         best_model = pickle.load(f)
 
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    mlflow.set_experiment("Meowmung Cat Trainer")
+    mlflow.set_experiment("Meowmung Dog Trainer")
 
     with mlflow.start_run() as run:
         mlflow.sklearn.log_model(best_model, "best_clf_cat")
@@ -109,6 +118,8 @@ def push_model_to_mlflow(ti, **kwargs):
                 "precision": metrics["precision"],
                 "recall": metrics["recall"],
                 "f1_score": metrics["f1_score"],
+                "matthews_corrcoef": metrics["matthews_corrcoef"],
+                "threat_score": metrics["threat_score"],
             }
         )
 
