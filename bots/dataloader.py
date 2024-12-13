@@ -113,14 +113,3 @@ def load_by_insurance(file_path):
     loader = Loader(file_path=file_path)
     loader.save_loader(f"data/dataloaders/{insurance_name}_loader.pkl")
     print(f"loader - {file_path}")
-
-
-if __name__ == "__main__":
-    terms = [
-        {"page": 5, "term_name": "반려동물의료비"},
-        {"page": 9, "term_name": "반려동물의료비확장보장(슬관절/고관절 탈구"},
-    ]
-
-    loader = Loader("data/pdf/KB_dog.pdf", terms)
-
-    print(loader.special_terms)
