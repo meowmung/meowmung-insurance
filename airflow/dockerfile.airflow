@@ -13,8 +13,10 @@ WORKDIR $AIRFLOW_HOME
 
 ENV AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite://///airflow.db
 
+COPY ./airflow/dags dags
 COPY ./airflow/connector.py connector.py
 COPY ./airflow/entrypoint.sh entrypoint.sh
+
 
 USER root
 RUN chmod +x entrypoint.sh
