@@ -74,10 +74,6 @@ class Loader:
                 )
         return docs
 
-    def save_loader(self, filepath):
-        with open(filepath, "wb") as file:
-            pickle.dump(self, file)
-
 
 def normalize_text(text):
     text = text.replace("I", "Ⅰ")
@@ -96,20 +92,6 @@ def find_term(chunk, term_list):
     return found_terms
 
 
-def load_loader(filepath):
-    with open(filepath, "rb") as file:
-        loader = pickle.load(file)
-
-    return loader
-
-
 def extract_company_name(file_path):
     company_name = Path(file_path).stem
     return company_name
-
-
-def load_by_insurance(file_path):
-    insurance_name = extract_company_name(file_path)
-    loader = Loader(file_path=file_path)
-    loader.save_loader(f"data/dataloaders/{insurance_name}_loader.pkl")
-    print(f"loader - {file_path}")

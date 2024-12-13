@@ -7,7 +7,7 @@ RUN pip install -r requirements.txt
 WORKDIR /admin
 
 COPY ./adminPage /admin/adminPage
-COPY ./bots/summary.py /admin/bots/summary.py
+COPY ./bots /admin/bots
 
 EXPOSE 8008
 

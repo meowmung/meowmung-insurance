@@ -3,7 +3,9 @@ pydantic
 uvicorn
 prometheus-fastapi-instrumentator
 python-dotenv
+langchain_openai
 langchain_community
 langchain
 pymupdf
 boto3
+pypdf

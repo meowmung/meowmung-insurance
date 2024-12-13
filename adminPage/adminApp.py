@@ -35,16 +35,6 @@ async def save_summary(request: InfoRequest):
 
         save_summaries(loader, company)
 
-        # bucket_name = os.getenv("S3_BUCKET")
-        # s3_key = f"meowmung-insurance/data/dataloaders/{company}_loader.pkl"
-        # s3.upload_file(loader, bucket_name, s3_key)
-
-        # return {"message": "File uploaded successfully", "s3_key": s3_key}
-
     except Exception as e:
         print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-if __name__ == "__main__":
-    uvicorn.run("adminPage.adminApp:app", host="127.0.0.1", port=8008, reload=True)
