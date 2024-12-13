@@ -23,6 +23,11 @@ from sklearn.metrics import (
     matthews_corrcoef,
 )
 from dotenv import load_dotenv
+import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+from bots.s3 import save_model_s3
 
 load_dotenv()
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI") + ":5000"
@@ -190,11 +195,9 @@ def save_model(pet_type, MODEL_STAGE, metric_name, ascending=True, **kwargs):
 
         print(f"Model (run_id: {best_run_id}) loaded successfully.")
 
-        local_model_path = f"{os.getenv("S3_URI")}data/models/best_clf_{pet_type}.pkl"
-        with open(local_model_path, "wb") as f:
-            pickle.dump(model, f)
+        save_model_s3(model, "cat")
 
-        print(f"Model saved locally at: {local_model_path}")
+        print(f"Model saved")
 
     except Exception as e:
         print(f"Error loading best model: {str(e)}")

@@ -2,15 +2,11 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from bots.dataloader import *
 from dotenv import load_dotenv
-import os
-import uvicorn
-import boto3
 from bots.summary import *
 
 load_dotenv()
 
 app = FastAPI()
-s3 = boto3.client("s3")
 
 
 class InfoRequest(BaseModel):

@@ -4,7 +4,7 @@ import pandas as pd
 import os
 import pymysql
 from dotenv import load_dotenv
-import pickle
+from bots.s3 import load_model_s3
 
 load_dotenv()
 
@@ -13,15 +13,9 @@ app = FastAPI()
 MYSQL_HOST = os.getenv("MYSQL_HOST") + ":3306"
 
 
-def load_model(pet_type):
-    with open(f"data/models/best_clf_{pet_type}.pkl", "rb") as file:
-        model = pickle.load(file)
-    return model
-
-
 def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
 
-    model = load_model(pet_type)
+    model = load_model_s3(pet_type)
 
     X = pd.DataFrame(
         [
@@ -58,7 +52,7 @@ def insert_info(
         conn = pymysql.connect(
             host=MYSQL_HOST,
             port=3306,
-            user="root",
+            user="lsj",
             password="1234",
             database="meowmung",
         )

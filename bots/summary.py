@@ -3,7 +3,7 @@ from langchain_openai import ChatOpenAI
 from bots.dataloader import *
 import json
 import re
-import yaml
+from bots.s3 import load_yaml_s3, save_json_s3
 
 
 class SummaryBot:
@@ -88,9 +88,7 @@ class SummaryBot:
 
 
 def get_insurance(company):
-    filepath = "data/config/insurance_items.yaml"
-    with open(filepath, "r", encoding="utf-8") as file:
-        insurance_items = yaml.safe_load(file)
+    insurance_items = load_yaml_s3("items")
     return insurance_items.get(company)
 
 
@@ -122,6 +120,4 @@ def save_summaries(loader, company):
 
     summary = bot.summarize(company)
 
-    output_filename = f"{company}_summary.json"
-    with open(output_filename, "w", encoding="utf-8") as f:
-        json.dump(summary, f, ensure_ascii=False, indent=4)
+    save_json_s3(summary, company)

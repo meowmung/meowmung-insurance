@@ -2,25 +2,23 @@ import json
 import glob
 from airflow.providers.mysql.hooks.mysql import MySqlHook
 import pymysql
-import yaml
 
 pymysql.install_as_MySQLdb()
+from bots.s3 import load_json_s3, load_yaml_s3
+from bots.dataloader import extract_company_name
 
 
-def get_insurance(company):
-    filepath = "/opt/data/config/insurance_logo.yaml"
-    with open(filepath, "r", encoding="utf-8") as file:
-        insurance_logo = yaml.safe_load(file)
+def get_logo(company):
+    insurance_logo = load_yaml_s3("logo")
     return insurance_logo.get(company)
 
 
-def generate_insurance_query(file_path, table_name):
-    with open(file_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
+def generate_insurance_query(company, table_name):
+    data = load_json_s3(company)
     insurance_id = data.get("company")
     company = insurance_id.split("_")[0]
     insurance = data.get("insurance")
-    logo = get_insurance(company)
+    logo = get_logo(company)
 
     query_list = []
     query_list.append(
@@ -35,9 +33,8 @@ def generate_insurance_query(file_path, table_name):
     return query_list
 
 
-def generate_term_query(file_path, table_name):
-    with open(file_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
+def generate_term_query(company, table_name):
+    data = load_json_s3(company)
     insurance_id = data.get("company")
     term_list = data.get("special_terms")
 
@@ -62,9 +59,8 @@ def generate_term_query(file_path, table_name):
     return query_list
 
 
-def generate_results_query(file_path, table_name):
-    with open(file_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
+def generate_results_query(company, table_name):
+    data = load_json_s3(company)
     term_list = data.get("special_terms")
     insurance_id = data.get("company")
 
@@ -87,7 +83,8 @@ def insert_insurances(dir_path, table_name, **kwargs):
     file_paths = glob.glob(dir_path)
 
     for path in file_paths:
-        queries = generate_insurance_query(path, table_name)
+        company = extract_company_name(path)
+        queries = generate_insurance_query(company, table_name)
         mysql_hook = MySqlHook(mysql_conn_id="meowmung_mysql")
         for query in queries:
             mysql_hook.run(query)
@@ -97,7 +94,8 @@ def insert_terms(dir_path, table_name, **kwargs):
     file_paths = glob.glob(dir_path)
 
     for path in file_paths:
-        queries = generate_term_query(path, table_name)
+        company = extract_company_name(path)
+        queries = generate_term_query(company, table_name)
         mysql_hook = MySqlHook(mysql_conn_id="meowmung_mysql")
         for query in queries:
             mysql_hook.run(query)
@@ -107,7 +105,8 @@ def insert_results(dir_path, table_name, **kwargs):
     file_paths = glob.glob(dir_path)
 
     for path in file_paths:
-        queries = generate_results_query(path, table_name)
+        company = extract_company_name(path)
+        queries = generate_results_query(company, table_name)
         mysql_hook = MySqlHook(mysql_conn_id="meowmung_mysql")
         for query in queries:
             mysql_hook.run(query)

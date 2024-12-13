@@ -7,5 +7,6 @@ langchain_openai
 langchain_community
 langchain
 pymupdf
-boto3
 pypdf
+requests_aws4auth
+chardet

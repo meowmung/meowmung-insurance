@@ -9,3 +9,5 @@ prometheus-fastapi-instrumentator
 pyyaml
 pymysql
 python-dotenv
+requests_aws4auth
+chardet
