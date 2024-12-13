@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from bots.dataloader import *
 from dotenv import load_dotenv
 from bots.summary import *
+from bots.query import *
 
 load_dotenv()
 
@@ -30,6 +31,10 @@ async def save_summary(request: InfoRequest):
         company = extract_company_name(file_path)
 
         save_summaries(loader, company)
+
+        insert_insurances(company)
+        insert_terms(company)
+        insert_results(company)
 
     except Exception as e:
         print(f"Error: {str(e)}")

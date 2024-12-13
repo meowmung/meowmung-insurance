@@ -61,11 +61,11 @@ def model_training_and_tuning(ti, **kwargs):
     rf = RandomForestClassifier()
     param_grid = {
         "n_estimators": [100, 200, 300],
-        "max_depth": [None, 10, 20],
-        "min_samples_split": [2, 5],
-        "min_samples_leaf": [1, 2],
-        "max_features": ["sqrt", "log2", None],
-        "bootstrap": [True, False],
+        # "max_depth": [None, 10, 20],
+        # "min_samples_split": [2, 5],
+        # "min_samples_leaf": [1, 2],
+        # "max_features": ["sqrt", "log2", None],
+        # "bootstrap": [True, False],
     }
 
     grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, n_jobs=-1)
@@ -229,6 +229,15 @@ with DAG(
         python_callable=push_model_to_mlflow,
     )
 
-    save_model = PythonOperator(task_id="save_model", python_callable=save_model)
+    save_model = PythonOperator(
+        task_id="save_model",
+        python_callable=save_model,
+        op_kwargs={
+            "pet_type": "dog",
+            "MODEL_STAGE": "Production",
+            "metric_name": "accuracy",
+            "ascending": True,
+        },
+    )
 
     fetch_data >> train_model >> push_mlflow >> save_model

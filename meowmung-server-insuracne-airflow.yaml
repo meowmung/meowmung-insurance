@@ -32,12 +32,9 @@ spec:
       volumes:
         - name: dags-volume
           hostPath:
-            path: https://hk-project-1.s3.ap-northeast-2.amazonaws.com/meowmung-insurance/airflow/dags/
+            path: hk-project-1.s3.ap-northeast-2.amazonaws.com:/meowmung-insurance/airflow/dags
             type: Directory
-        - name: data-volume
-          hostPath:
-            path: https://hk-project-1.s3.ap-northeast-2.amazonaws.com/meowmung-insurance/data/data/
-            type: Directory
+
 
 ---
 apiVersion: v1
