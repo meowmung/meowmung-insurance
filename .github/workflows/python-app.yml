@@ -16,7 +16,7 @@ jobs:
             repo: recommendation
           - dockerfile: mysql/dockerfile.mysql
             repo: mysql
-          - dockerfile: admin/dockerfile.admin
+          - dockerfile: adminPage/dockerfile.admin
             repo: admin
     steps:
       - name: Checkout repository
