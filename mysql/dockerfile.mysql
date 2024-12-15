@@ -1,6 +1,6 @@
 FROM infrabuilder/mysql-aws-cli:mysql-8
 
-COPY sync_s3.sh /usr/local/bin/sync_s3.sh
+COPY ./mysql/sync_s3.sh /usr/local/bin/sync_s3.sh
 RUN chmod +x /usr/local/bin/sync_s3.sh
 
 RUN mkdir -p /var/lib/mysql && chown mysql:mysql /var/lib/mysql
