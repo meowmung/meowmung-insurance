@@ -1,6 +1,10 @@
-FROM mysql:8.0.40
+FROM infrabuilder/mysql-aws-cli:mysql-8
 
-ENV MYSQL_ROOT_PASSWORD="1234"
-ENV MYSQL_DATABASE="meowmung"
+COPY sync_s3.sh /usr/local/bin/sync_s3.sh
+RUN chmod +x /usr/local/bin/sync_s3.sh
+
+RUN mkdir -p /var/lib/mysql && chown mysql:mysql /var/lib/mysql
 
 EXPOSE 3306
+
+ENTRYPOINT ["/usr/local/bin/sync_s3.sh"]
