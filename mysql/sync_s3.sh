@@ -19,7 +19,7 @@ function sync_to_s3_on_exit {
 trap sync_to_s3_on_exit EXIT
 
 echo "Starting MySQL server..."
-mysqld --user=mysql --bind-address=0.0.0.0 &
+mysqld --user=mysql &
 
 sleep 5
 
