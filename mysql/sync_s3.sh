@@ -1,5 +1,13 @@
 #!/bin/bash
 
+MYSQL_CONF_FILE="/etc/mysql/my.cnf"
+
+if ! grep -q "bind-address" "$MYSQL_CONF_FILE"; then
+  echo "Adding bind-address configuration to $MYSQL_CONF_FILE..."
+  echo "[mysqld]" >> "$MYSQL_CONF_FILE"
+  echo "bind-address = 0.0.0.0" >> "$MYSQL_CONF_FILE"
+fi
+
 if [ ! -d "$MYSQL_DATA_DIR/mysql" ]; then
   echo "Initializing MySQL data directory..."
   mysqld --initialize-insecure --user=mysql
