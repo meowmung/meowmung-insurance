@@ -10,7 +10,7 @@ load_dotenv()
 
 app = FastAPI()
 
-MYSQL_HOST = os.getenv("MYSQL_HOST") + ":3306"
+MYSQL_HOST = os.getenv("MYSQL_HOST")
 
 
 def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):

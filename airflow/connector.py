@@ -10,8 +10,8 @@ def create_connection():
         conn_id="meowmung_mysql",
         conn_type="mysql",
         host=os.getenv("MYSQL_HOST"),
-        login="root",
-        password="1234",
+        login="meowmung",
+        password="meowmung1234",
         schema="meowmung",
         port=3306,
     )
