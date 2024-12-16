@@ -32,6 +32,8 @@ echo "Backup file downloaded."
 
 echo "Restoring database from backup..."
 mysql -u root --password="$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS meowmung;"
+mysql -u root --password="$MYSQL_ROOT_PASSWORD" -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'meowmung1234' WITH GRANT OPTION;"
+mysql -u root --password="$MYSQL_ROOT_PASSWORD" -e "FLUSH PRIVILEGES;"
 mysql -u root --password="$MYSQL_ROOT_PASSWORD" meowmung < "$MYSQL_DATA_DIR/$BACKUP_FILE"
 echo "Database restoration completed."
 
