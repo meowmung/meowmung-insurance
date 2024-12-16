@@ -1,0 +1,12 @@
+fastapi
+pydantic
+uvicorn
+prometheus-fastapi-instrumentator
+python-dotenv
+langchain_openai
+langchain_community
+langchain
+pymupdf
+pypdf
+requests_aws4auth
+chardet

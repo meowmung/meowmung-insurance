@@ -11,19 +11,25 @@ import pickle
 import mlflow
 import mlflow.sklearn
 from mlflow.tracking import MlflowClient
-from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     classification_report,
     accuracy_score,
     precision_score,
     recall_score,
     f1_score,
+    matthews_corrcoef,
 )
 from dotenv import load_dotenv
+import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+from bots.s3 import save_model_s3
 
 load_dotenv()
-
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI") + ":5000"
 
 
@@ -31,6 +37,7 @@ def fetch_data_from_mysql(**kwargs):
     mysql_hook = MySqlHook(mysql_conn_id="meowmung_mysql")
     query = "SELECT * FROM traindata_cat;"
     df = mysql_hook.get_pandas_df(query)
+    print(df["age"].unique())
 
     if df.empty:
         raise ValueError("No data found in MySQL")
@@ -47,28 +54,36 @@ def model_training_and_tuning(ti, **kwargs):
     X = df.drop(["train_id", "disease_code"], axis=1)
     y = df["disease_code"]
 
-    rf = RandomForestClassifier()
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, stratify=y, random_state=42
+    )
+
+    xgb = XGBClassifier(
+        random_state=42, use_label_encoder=False, eval_metric="mlogloss"
+    )
     param_grid = {
-        "n_estimators": [100, 200, 300],
-        "max_depth": [None, 10, 20],
-        "min_samples_split": [2, 5],
-        "min_samples_leaf": [1, 2],
-        "max_features": ["sqrt", "log2", None],
-        "bootstrap": [True, False],
+        "n_estimators": [50, 100, 150, 200],
+        "max_depth": [3, 6, 10],
+        "learning_rate": [0.01, 0.1, 0.2],
+        "subsample": [0.8, 1.0],
+        "colsample_bytree": [0.8, 1.0],
+        "gamma": [0, 0.1, 0.2],
+        "min_child_weight": [1, 2],
     }
 
-    grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, n_jobs=-1)
-    grid_search.fit(X, y)
+    grid_search = GridSearchCV(estimator=xgb, param_grid=param_grid, cv=3, n_jobs=-1)
+    grid_search.fit(X_train, y_train)
 
     best_model = grid_search.best_estimator_
+    y_pred = grid_search.predict(X_test)
+    report = classification_report(y_test, y_pred)
 
-    y_pred = grid_search.predict(X)
-    report = classification_report(y, y_pred)
-
-    accuracy = accuracy_score(y, y_pred)
-    precision = precision_score(y, y_pred, average="weighted")
-    recall = recall_score(y, y_pred, average="weighted")
-    f1 = f1_score(y, y_pred, average="weighted")
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred, average="weighted")
+    recall = recall_score(y_test, y_pred, average="weighted")
+    f1 = f1_score(y_test, y_pred, average="weighted")
+    mcc = matthews_corrcoef(y_test, y_pred)
+    threat_score = precision + recall + f1
 
     model_filename = "/tmp/best_model_cat.pkl"
     with open(model_filename, "wb") as f:
@@ -83,6 +98,8 @@ def model_training_and_tuning(ti, **kwargs):
             "recall": recall,
             "f1_score": f1,
             "classification_report": report,
+            "matthews_corrcoef": mcc,
+            "threat_score": threat_score,
         },
     )
 
@@ -97,7 +114,7 @@ def push_model_to_mlflow(ti, **kwargs):
         best_model = pickle.load(f)
 
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    mlflow.set_experiment("Meowmung Cat Trainer")
+    mlflow.set_experiment("Meowmung Dog Trainer")
 
     with mlflow.start_run() as run:
         mlflow.sklearn.log_model(best_model, "best_clf_cat")
@@ -109,6 +126,8 @@ def push_model_to_mlflow(ti, **kwargs):
                 "precision": metrics["precision"],
                 "recall": metrics["recall"],
                 "f1_score": metrics["f1_score"],
+                "matthews_corrcoef": metrics["matthews_corrcoef"],
+                "threat_score": metrics["threat_score"],
             }
         )
 
@@ -139,6 +158,52 @@ def push_model_to_mlflow(ti, **kwargs):
         print(f"Model version {model_version.version} transitioned to 'Production'")
 
 
+def save_model(pet_type, MODEL_STAGE, metric_name, ascending=True, **kwargs):
+    try:
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+        MODEL_NAME = f"best_clf_{pet_type}"
+        client = MlflowClient()
+
+        model_versions = client.search_model_versions(f"name='{MODEL_NAME}'")
+
+        if not model_versions:
+            raise ValueError(f"No registered models found for {MODEL_NAME}")
+
+        production_models = [
+            mv for mv in model_versions if mv.current_stage == MODEL_STAGE
+        ]
+
+        if not production_models:
+            raise ValueError(f"No models in stage '{MODEL_STAGE}' for {MODEL_NAME}")
+
+        model_metrics = []
+        for model_version in production_models:
+            run_id = model_version.run_id
+            run_data = client.get_run(run_id).data
+            metric_value = run_data.metrics.get(metric_name)
+            if metric_value is not None:
+                model_metrics.append((run_id, metric_value))
+
+        if not model_metrics:
+            raise ValueError(f"No metrics found for models in stage '{MODEL_STAGE}'")
+
+        model_metrics.sort(key=lambda x: x[1], reverse=not ascending)
+        best_run_id = model_metrics[0][0]
+
+        model_uri = f"runs:/{best_run_id}/best_clf_{pet_type}"
+        model = mlflow.sklearn.load_model(model_uri)
+
+        print(f"Model (run_id: {best_run_id}) loaded successfully.")
+
+        save_model_s3(model, "cat")
+
+        print(f"Model saved")
+
+    except Exception as e:
+        print(f"Error loading best model: {str(e)}")
+        raise
+
+
 default_args = {
     "owner": "airflow",
     "start_date": datetime(2024, 11, 26),
@@ -167,4 +232,6 @@ with DAG(
         python_callable=push_model_to_mlflow,
     )
 
-    fetch_data >> train_model >> push_mlflow
+    save_model = PythonOperator(task_id="save_model", python_callable=save_model)
+
+    fetch_data >> train_model >> push_mlflow >> save_model

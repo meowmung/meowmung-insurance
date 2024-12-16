@@ -1,8 +1,8 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import pickle
 from pathlib import Path
 import re
+import os
 import fitz
 
 
@@ -15,11 +15,10 @@ class Document:
 
 class Loader:
     def __init__(self, file_path, terms):
-        self.special_terms = self.extract_terms(file_path, file_path, terms)
+        self.special_terms = self.extract_terms(file_path, terms)
         self.docs = self.load_file(file_path)
-        self.save_loader(f"data/dataloaders/{extract_company_name(file_path)}.pkl")
 
-    def extract_terms(self, pdf_path, output_path, terms):
+    def extract_terms(self, pdf_path, terms):
         print("extracting terms...")
         doc = fitz.open(pdf_path)
         extracted_terms = []
@@ -35,8 +34,12 @@ class Loader:
             page.add_highlight_annot(target)
             extracted_terms.append(term_name)
 
-        doc.save(output_path)
+        temp_path = pdf_path + ".temp"
+
+        doc.save(temp_path, incremental=False)
         doc.close()
+
+        os.replace(temp_path, pdf_path)
 
         return extracted_terms
 
@@ -70,10 +73,6 @@ class Loader:
                 )
         return docs
 
-    def save_loader(self, filepath):
-        with open(filepath, "wb") as file:
-            pickle.dump(self, file)
-
 
 def normalize_text(text):
     text = text.replace("I", "Ⅰ")
@@ -92,20 +91,6 @@ def find_term(chunk, term_list):
     return found_terms
 
 
-def load_loader(filepath):
-    with open(filepath, "rb") as file:
-        loader = pickle.load(file)
-
-    return loader
-
-
 def extract_company_name(file_path):
     company_name = Path(file_path).stem
     return company_name
-
-
-def load_by_insurance(file_path):
-    insurance_name = extract_company_name(file_path)
-    loader = Loader(file_path=file_path)
-    loader.save_loader(f"data/dataloaders/{insurance_name}_loader.pkl")
-    print(f"loader - {file_path}")

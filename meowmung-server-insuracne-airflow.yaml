@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meowmung-server-insurance-airflow
+  namespace: insurance
+  labels:
+    app: meowmung-server-insurance-airflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: meowmung-server-insurance-airflow
+  template:
+    metadata:
+      name: meowmung-server-insurance-airflow
+      labels:
+        app: meowmung-server-insurance-airflow
+    spec:
+      containers:
+        - name: meowmung-server-insurance-airflow
+          image: jjdg148/meowmung-insurance-airflow
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8087
+              protocol: TCP
+          volumeMounts:
+            - name: dags-volume
+              mountPath: /opt/airflow/dags
+            - name: data-volume
+              mountPath: /opt/data
+      restartPolicy: Always
+      volumes:
+        - name: dags-volume
+          hostPath:
+            path: hk-project-1.s3.ap-northeast-2.amazonaws.com:/meowmung-insurance/airflow/dags
+            type: Directory
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: meowmung-server-insurance-airflow-service
+  namespace: insurance
+spec:
+  selector:
+    app: meowmung-server-insurance-airflow
+  ports:
+    - protocol: TCP
+      port: 8087
+      targetPort: 8087
+  type: LoadBalancer
