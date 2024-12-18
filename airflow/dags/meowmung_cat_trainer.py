@@ -58,9 +58,7 @@ def model_training_and_tuning(ti, **kwargs):
         X, y, test_size=0.2, stratify=y, random_state=42
     )
 
-    xgb = XGBClassifier(
-        random_state=42, use_label_encoder=False, eval_metric="mlogloss"
-    )
+    xgb = XGBClassifier(random_state=42, eval_metric="mlogloss", verbosity=2)
     param_grid = {
         "n_estimators": [50, 100, 150, 200],
         "max_depth": [3, 6, 10],
