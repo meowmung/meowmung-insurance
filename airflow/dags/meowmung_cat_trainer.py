@@ -11,7 +11,7 @@ import pickle
 import mlflow
 import mlflow.sklearn
 from mlflow.tracking import MlflowClient
-from xgboost import XGBClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
@@ -37,7 +37,7 @@ def fetch_data_from_mysql(**kwargs):
     mysql_hook = MySqlHook(mysql_conn_id="meowmung_mysql")
     query = "SELECT * FROM traindata_cat;"
     df = mysql_hook.get_pandas_df(query)
-    print(df["age"].unique())
+    print(df["disease_code"].value_counts())
 
     if df.empty:
         raise ValueError("No data found in MySQL")
@@ -58,18 +58,17 @@ def model_training_and_tuning(ti, **kwargs):
         X, y, test_size=0.2, stratify=y, random_state=42
     )
 
-    xgb = XGBClassifier(random_state=42, eval_metric="mlogloss", verbosity=2)
+    rf = RandomForestClassifier()
     param_grid = {
-        "n_estimators": [50, 100, 150, 200],
-        "max_depth": [3, 6, 10],
-        "learning_rate": [0.01, 0.1, 0.2],
-        "subsample": [0.8, 1.0],
-        "colsample_bytree": [0.8, 1.0],
-        "gamma": [0, 0.1, 0.2],
-        "min_child_weight": [1, 2],
+        "n_estimators": [100, 200, 300],
+        "max_depth": [None, 10, 20],
+        "min_samples_split": [2, 5],
+        "min_samples_leaf": [1, 2],
+        "max_features": ["sqrt", "log2", None],
+        "bootstrap": [True, False],
     }
 
-    grid_search = GridSearchCV(estimator=xgb, param_grid=param_grid, cv=3, n_jobs=-1)
+    grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, n_jobs=-1)
     grid_search.fit(X_train, y_train)
 
     best_model = grid_search.best_estimator_
@@ -112,7 +111,7 @@ def push_model_to_mlflow(ti, **kwargs):
         best_model = pickle.load(f)
 
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    mlflow.set_experiment("Meowmung Dog Trainer")
+    mlflow.set_experiment("Meowmung Cat Trainer")
 
     with mlflow.start_run() as run:
         mlflow.sklearn.log_model(best_model, "best_clf_cat")
@@ -230,6 +229,15 @@ with DAG(
         python_callable=push_model_to_mlflow,
     )
 
-    save_model = PythonOperator(task_id="save_model", python_callable=save_model)
+    save_model = PythonOperator(
+        task_id="save_model",
+        python_callable=save_model,
+        op_kwargs={
+            "pet_type": "cat",
+            "MODEL_STAGE": "Production",
+            "metric_name": "accuracy",
+            "ascending": True,
+        },
+    )
 
     fetch_data >> train_model >> push_mlflow >> save_model

@@ -2,7 +2,6 @@ python-dotenv
 mlflow
 scikit-learn
 pandas
-xgboost
 requests_aws4auth
 chardet
 s3fs
