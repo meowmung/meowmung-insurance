@@ -5,14 +5,20 @@ from dotenv import load_dotenv
 from bots.summary import *
 from bots.query import *
 import uvicorn
+from typing import List
 
 load_dotenv()
 
 app = FastAPI()
 
 
+class Term(BaseModel):
+    page: int
+    term_name: str
+
+
 class InfoRequest(BaseModel):
-    terms: list
+    terms: List[Term]
     file_path: str
 
 
@@ -36,6 +42,8 @@ async def save_summary(request: InfoRequest):
         insert_insurances(company)
         insert_terms(company)
         insert_results(company)
+
+        return "Summary Pipeline Successful!"
 
     except Exception as e:
         print(f"Error: {str(e)}")

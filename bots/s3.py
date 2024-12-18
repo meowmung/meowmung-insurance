@@ -6,6 +6,7 @@ import json
 import pickle
 from io import BytesIO
 import yaml
+import tempfile
 
 
 load_dotenv()
@@ -36,15 +37,19 @@ def load_json_s3(company):
     return json_data
 
 
-def load_pdf_s3(company, dest):
-    url = bucket_url + f"data/pdf/{company}.pdf"
+def load_pdf_s3(file_path):
+    url = f"{bucket_url}{file_path}"
     response = requests.get(url, auth=awsauth)
     response.raise_for_status()
 
     pdf_file = BytesIO(response.content)
 
-    with open(dest, "wb") as f:
-        f.write(pdf_file.getvalue())
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_pdf:
+        temp_pdf.write(pdf_file.getvalue())
+        temp_pdf_path = temp_pdf.name
+
+    print(f"File saved at {temp_pdf_path}")
+    return temp_pdf_path
 
 
 def load_yaml_s3(type):
@@ -73,3 +78,7 @@ def save_json_s3(summary, company):
         auth=awsauth,
         headers={"Content-Type": "application/json"},
     )
+
+
+if __name__ == "__main__":
+    print(load_pdf_s3("data/pdf/terms_test.pdf"))

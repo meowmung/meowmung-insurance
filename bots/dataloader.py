@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 import os
 import fitz
+from bots.s3 import load_pdf_s3
 
 
 class Document:
@@ -18,12 +19,14 @@ class Loader:
         self.special_terms = self.extract_terms(file_path, terms)
         self.docs = self.load_file(file_path)
 
-    def extract_terms(self, pdf_path, terms):
+    def extract_terms(self, s3_path, terms):
         print("extracting terms...")
+        pdf_path = load_pdf_s3(s3_path)
         doc = fitz.open(pdf_path)
         extracted_terms = []
 
         for term in terms:
+            term = term.dict()
             page_num = term["page"] - 1
             term_name = normalize_text(term["term_name"])
 
@@ -94,3 +97,7 @@ def find_term(chunk, term_list):
 def extract_company_name(file_path):
     company_name = Path(file_path).stem
     return company_name
+
+
+if __name__ == "__main__":
+    loader = Loader("data/pdf/terms_test.pdf", [{"page": 2, "term_name": "hello"}])
