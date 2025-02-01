@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import pandas as pd
 import os
 import pymysql
+import asyncio
 from dotenv import load_dotenv
 from bots.s3 import load_model_s3
 
@@ -13,9 +14,8 @@ app = FastAPI()
 MYSQL_HOST = os.getenv("MYSQL_HOST")
 
 
-def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
-
-    model = load_model_s3(pet_type)
+async def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
+    model = await asyncio.to_thread(load_model_s3, pet_type)
 
     X = pd.DataFrame(
         [
@@ -29,27 +29,19 @@ def pred_ill(pet_type, age, gender, breed, weight, food_count, neutered):
             }
         ]
     )
-    predicted = model.predict(X)[0]
 
-    predicted_code = int(predicted)
-
+    predicted = await asyncio.to_thread(model.predict, X)
+    predicted_code = int(predicted[0])
     return predicted_code
 
 
-def insert_info(
-    pet_type,
-    age,
-    gender,
-    breed,
-    weight,
-    food_count,
-    neutered,
-    current_disease,
+async def insert_info(
+    pet_type, age, gender, breed, weight, food_count, neutered, current_disease
 ):
     load_dotenv()
-
     try:
-        conn = pymysql.connect(
+        conn = await asyncio.to_thread(
+            pymysql.connect,
             host=MYSQL_HOST,
             port=3306,
             user="lsj",
@@ -62,22 +54,22 @@ def insert_info(
                     (age, weight, food_count, breed_code, gender, neutered, disease_code)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)"""
 
-        cursor.execute(
-            query, (age, weight, food_count, breed, gender, neutered, current_disease)
+        await asyncio.to_thread(
+            cursor.execute,
+            query,
+            (age, weight, food_count, breed, gender, neutered, current_disease),
         )
         conn.commit()
-        print("Data inserted successfully!")
 
     except pymysql.MySQLError as e:
-        print("MySQL error occurred:", e)
+        raise HTTPException(status_code=500, detail=f"MySQL Error: {str(e)}")
 
     except Exception as e:
-        print("An error occurred:", e)
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
     finally:
         if conn:
             conn.close()
-            print("Connection closed.")
 
 
 class InfoRequest(BaseModel):
@@ -98,38 +90,28 @@ class RecommendationResponse(BaseModel):
 @app.post("/insurance/recommend", response_model=RecommendationResponse)
 async def return_illness(request: InfoRequest):
     try:
-        pet_type = request.pet_type
-        age = request.age
-        gender = request.gender
-        breed = request.breed
-        weight = request.weight
-        food_count = request.food_count
-        neutered = request.neutered
-        current_illness = request.current_disease
-
-        insert_info(
-            pet_type=pet_type,
-            age=age,
-            gender=gender,
-            breed=breed,
-            weight=weight,
-            food_count=food_count,
-            neutered=neutered,
-            current_disease=current_illness,
+        await insert_info(
+            pet_type=request.pet_type,
+            age=request.age,
+            gender=request.gender,
+            breed=request.breed,
+            weight=request.weight,
+            food_count=request.food_count,
+            neutered=request.neutered,
+            current_disease=request.current_disease,
         )
 
-        illness = pred_ill(
-            pet_type=pet_type,
-            age=age,
-            gender=gender,
-            breed=breed,
-            weight=weight,
-            food_count=food_count,
-            neutered=neutered,
+        illness = await pred_ill(
+            pet_type=request.pet_type,
+            age=request.age,
+            gender=request.gender,
+            breed=request.breed,
+            weight=request.weight,
+            food_count=request.food_count,
+            neutered=request.neutered,
         )
 
         return RecommendationResponse(disease=illness)
 
     except Exception as e:
-        print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
