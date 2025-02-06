@@ -6,10 +6,15 @@ import pymysql
 import asyncio
 from dotenv import load_dotenv
 from bots.s3 import load_model_s3
+from fastapi import FastAPI
+from prometheus_client import generate_latest, CollectorRegistry, CONTENT_TYPE_LATEST
+from prometheus_client import Counter
+from starlette.responses import Response
 
 load_dotenv()
 
 app = FastAPI()
+registry = CollectorRegistry()
 
 MYSQL_HOST = os.getenv("MYSQL_HOST")
 
@@ -115,3 +120,11 @@ async def return_illness(request: InfoRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+REQUEST_COUNT = Counter("api_requests_total", "Total API Requests", ["endpoint"])
+
+
+@app.get("/metrics")
+async def metrics():
+    return Response(generate_latest(registry), media_type=CONTENT_TYPE_LATEST)
